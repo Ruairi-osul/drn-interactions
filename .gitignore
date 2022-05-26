@@ -1,0 +1,13 @@
+.env
+__pycache__
+.ipynb_
+.Rproj.user
+.Rh*
+*.Rp*
+*.parquet*
+*tests*
+*.egg*
+.mypy*
+*export*
+figs
+*.svg
