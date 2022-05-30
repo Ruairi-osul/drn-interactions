@@ -80,13 +80,13 @@ class DistanceExporter(Exporter):
     @staticmethod
     def _distance_between_chans(ch1, ch2):
         """
-            Calculate distances between two channels on a cambridge neurotech 32 channel P series probe.
-            
-            Electrode spec:
-                2 shanks 250um appart
-                Each shank has 16 channels in two columns of 8, spaced 22.5um appart
-                Contacts are placed 25um above eachother
-            """
+        Calculate distances between two channels on a cambridge neurotech 32 channel P series probe.
+
+        Electrode spec:
+            2 shanks 250um appart
+            Each shank has 16 channels in two columns of 8, spaced 22.5um appart
+            Contacts are placed 25um above eachother
+        """
         # Shank
         shank_1 = 1 if ch1 <= 15 else 2
         shank_2 = 1 if ch2 <= 15 else 2
@@ -218,7 +218,69 @@ class EEGExporter(BlockExporter):
     @staticmethod
     def _assign_band(df_fft, freq_col="frequency"):
         """
-        Filter freqs between 0 - 8 Hz and assign each freq to 
+        Filter freqs between 0 - 8 Hz and assign each freq to
+        delta or theta band
+        """
+        return df_fft.loc[lambda x: (x[freq_col] < 8) & (x[freq_col] > 0)].assign(
+            band=lambda x: x[freq_col].apply(lambda y: "delta" if y < 4 else "theta")
+        )
+
+    @staticmethod
+    def _mean_band_psd_ts(
+        df_fft,
+        sig_col="signal_name",
+        sesh_col="session_name",
+        time_col="timepoint_s",
+        group_col="group_name",
+        band_col="band",
+        psd_col="fft_value",
+    ):
+        """
+        Create df with one row per timepoint per band and the mean
+        power in the band at that timepoint.
+        """
+        return (
+            df_fft.groupby([sesh_col, sig_col, time_col, group_col, band_col])
+            .apply(lambda x: np.mean(x[psd_col]))
+            .reset_index()
+            .rename(columns={0: "psd"})
+            .pivot_table(index=[sesh_col, time_col], columns=band_col, values="psd")
+            .reset_index()
+            .assign(
+                delta_smooth=lambda x: gaussian_filter1d(x.delta, 5),
+                theta_smooth=lambda x: gaussian_filter1d(x.theta, 5),
+                delta_to_theta=lambda x: x.delta / x.theta,
+                delta_to_theta_smooth=lambda x: x.delta_smooth / x.theta_smooth,
+            )
+            .rename(columns={time_col: "time"})
+            .assign(time=lambda x: x["time"] - 2)
+        )
+
+
+class LFPExporter(BlockExporter):
+    signal = "lfp_lr"
+
+    def _get_raw_data(self):
+        try:
+            df = select_stft(
+                self.engine,
+                self.metadata,
+                group_names=get_group_names(),
+                signal_names=[EEGExporter.signal],
+                align_to_block=self.align_to_block,
+                t_before=self.t_before,
+            )
+        except IndexError:
+            df = pd.DataFrame()
+        return df
+
+    def get_band_ts(self):
+        return self._mean_band_psd_ts(self._assign_band(self.processed_data))
+
+    @staticmethod
+    def _assign_band(df_fft, freq_col="frequency"):
+        """
+        Filter freqs between 0 - 8 Hz and assign each freq to
         delta or theta band
         """
         return df_fft.loc[lambda x: (x[freq_col] < 8) & (x[freq_col] > 0)].assign(
