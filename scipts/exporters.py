@@ -76,6 +76,30 @@ class NeuronsExporter(Exporter):
         return width.merge(peak_asym).merge(mfr).merge(cv_isi).merge(raw_data)
 
 
+class WaveformsExporter(Exporter):
+    def _get_raw_data(self):
+        return load_waveforms(self.engine, self.metadata)
+
+    def _process_data(self, raw_data):
+        df_spikes = load_spiketimes(self.engine, self.metadata, block_name="pre")
+        waveforms = load_waveforms(self.engine, self.metadata)
+        peaks = waveform_peaks_by_neuron(
+            waveforms,
+            neuron_col="neuron_id",
+            index_col="waveform_index",
+            value_col="waveform_value",
+        ).dropna()
+        width = waveform_width_by_neuron(peaks, peak_names=["initiation", "ahp"])
+        peak_asym = peak_asymmetry_by_neuron(peaks, peak_names=["initiation", "ahp"])
+        mfr = mean_firing_rate_by(
+            df_spikes, spiketimes_col="spiketimes", spiketrain_col="neuron_id"
+        )
+        cv_isi = cv2_isi_by(
+            df_spikes, spiketimes_col="spiketimes", spiketrain_col="neuron_id"
+        )
+        return width.merge(peak_asym).merge(mfr).merge(cv_isi).merge(raw_data)
+
+
 class DistanceExporter(Exporter):
     @staticmethod
     def _distance_between_chans(ch1, ch2):

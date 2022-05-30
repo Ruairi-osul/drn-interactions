@@ -3,6 +3,16 @@ from typing import Tuple
 import pandas as pd
 
 
+def load_recordings() -> pd.DataFrame:
+    """Load neurons data from the data dir to a DataFrame
+
+    Returns:
+        pd.DataFrame: DataFrame of neurons data
+    """
+    p = get_data_dir() / "recordings.parquet.gzip"
+    return pd.read_parquet(p)
+
+
 def load_neurons() -> pd.DataFrame:
     """Load neurons data from the data dir to a DataFrame
 
@@ -37,7 +47,22 @@ def load_spikes(block_name: str) -> pd.DataFrame:
 
 
 def load_eeg(block_name: str) -> pd.DataFrame:
-    p = get_data_dir() / block_name / "stft.parquet.gzip"
+    p = get_data_dir() / block_name / "eeg_stft.parquet.gzip"
+    return pd.read_parquet(p)
+
+
+def load_eeg_ts(block_name: str) -> pd.DataFrame:
+    p = get_data_dir() / block_name / "eeg_band_ts.parquet.gzip"
+    return pd.read_parquet(p)
+
+
+def load_lfp(block_name: str) -> pd.DataFrame:
+    p = get_data_dir() / block_name / "lfp_stft.parquet.gzip"
+    return pd.read_parquet(p)
+
+
+def load_lfp_ts(block_name: str) -> pd.DataFrame:
+    p = get_data_dir() / block_name / "lfp_band_ts.parquet.gzip"
     return pd.read_parquet(p)
 
 
@@ -47,13 +72,14 @@ def load_events(block_name: str) -> pd.DataFrame:
 
 
 def get_group_names() -> Tuple[str, str, str, str, str, str]:
-    return ("acute_citalopram", 
-                "acute_saline", 
-                "shock", 
-                "sham", 
-                "acute_cit", 
-                "acute_sal"
-                )
+    return (
+        "acute_citalopram",
+        "acute_saline",
+        "shock",
+        "sham",
+        "acute_cit",
+        "acute_sal",
+    )
 
 
 def concat_spikes_from_connsecutive_sessions(
@@ -102,16 +128,18 @@ def get_block_names() -> Tuple[str, str, str, str, str, str, str, str, str, str]
 
 
 def _get_basename(project_dirname="DRN Interactions") -> Path:
-    return [p for p in Path(__file__).absolute().parents if p.name == project_dirname][
-        0
-    ]
+    return [
+        p
+        for p in Path(__file__).absolute().parents
+        if p.name.lower() == project_dirname.lower()
+    ][0]
 
 
 def get_data_dir(project_dirname="DRN Interactions") -> Path:
     """Get the path of the data directory
 
     Args:
-        project_dirname (str, optional): Name of root directory in project. Defaults to "citalopram-project".
+        project_dirname (str, optional): Name of root directory in project. Defaults to "DRN Interactions".
 
     Returns:
         Path: Path to the data directory
@@ -119,3 +147,11 @@ def get_data_dir(project_dirname="DRN Interactions") -> Path:
     basepath = _get_basename(project_dirname=project_dirname)
     return basepath / "data"
 
+
+def get_derived_data_dir(project_dirname="DRN Interactions") -> Path:
+    return get_data_dir(project_dirname=project_dirname) / "derived"
+
+
+def load_clusters(name: str = "waveforms") -> pd.DataFrame:
+    data_dir = get_derived_data_dir() / "clusters"
+    return pd.read_csv(data_dir / f"{name}.csv")
