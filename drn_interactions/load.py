@@ -155,3 +155,7 @@ def get_derived_data_dir(project_dirname="DRN Interactions") -> Path:
 def load_clusters(name: str = "waveforms") -> pd.DataFrame:
     data_dir = get_derived_data_dir() / "clusters"
     return pd.read_csv(data_dir / f"{name}.csv")
+
+
+def load_derived_generic(name):
+    return pd.read_csv(get_derived_data_dir().absolute() / name)
