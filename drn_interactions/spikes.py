@@ -26,6 +26,8 @@ class SpikesHandler:
                 lambda x: x.session_name.isin(self.session_names)
             ].neuron_id.unique()
 
+        if len(self.neuron_ids) == 0:
+            raise ValueError("No Neurons")
         self._binned = None
         self._binned_piv = None
         self._spikes = None
@@ -58,13 +60,14 @@ class SpikesHandler:
     def binned_piv(self):
         return self.binned.pivot(index="bin", columns="neuron_id", values="counts")
 
-    @staticmethod
-    def get_population_train(df):
-        return df.sum(axis=1).to_frame("population")
 
-    def pop_population_train(self, exclude):
-        df = self.binned_piv.copy()
-        neuron = df.pop(exclude).to_frame(name=exclude)
-        pop_train = self.get_population_train(df)
-        return neuron, pop_train
+def get_population_train(df_piv):
+    return df_piv.sum(axis=1).to_frame("population")
+
+
+def pop_population_train(df_piv, exclude):
+    df = df_piv.copy()
+    neuron = df.pop(exclude).to_frame(name=exclude)
+    pop_train = get_population_train(df)
+    return neuron, pop_train
 
