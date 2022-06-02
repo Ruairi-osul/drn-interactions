@@ -290,7 +290,7 @@ class LFPExporter(BlockExporter):
                 self.engine,
                 self.metadata,
                 group_names=get_group_names(),
-                signal_names=[EEGExporter.signal],
+                signal_names=[LFPExporter.signal],
                 align_to_block=self.align_to_block,
                 t_before=self.t_before,
             )
@@ -341,3 +341,5 @@ class LFPExporter(BlockExporter):
             .rename(columns={time_col: "time"})
             .assign(time=lambda x: x["time"] - 2)
         )
+
+# TODO add exporter for raw LFP and EEG
