@@ -71,6 +71,11 @@ def load_events(block_name: str) -> pd.DataFrame:
     return pd.read_parquet(p)
 
 
+def load_waveforms() -> pd.DataFrame:
+    p = get_data_dir() / "waveforms.parquet.gzip"
+    return pd.read_parquet(p)
+
+
 def get_group_names() -> Tuple[str, str, str, str, str, str]:
     return (
         "acute_citalopram",
