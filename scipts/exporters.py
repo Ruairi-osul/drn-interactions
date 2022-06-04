@@ -1,3 +1,4 @@
+from ephys_queries.queries import select_analog_signal_data
 import pandas as pd
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
@@ -343,3 +344,38 @@ class LFPExporter(BlockExporter):
         )
 
 # TODO add exporter for raw LFP and EEG
+
+
+class LFPRawExporter(BlockExporter):
+    signal = "lfp_lr"
+
+    def _get_raw_data(self):
+        try:
+            df = select_analog_signal_data(
+                self.engine,
+                self.metadata,
+                group_names=get_group_names(),
+                signal_names=[LFPRawExporter.signal],
+                align_to_block=self.align_to_block,
+                t_before=self.t_before,
+            )
+        except IndexError:
+            df = pd.DataFrame()
+        return df
+
+class EEGRawExporter(BlockExporter):
+    signal = "eeg_occ"
+
+    def _get_raw_data(self):
+        try:
+            df = select_analog_signal_data(
+                self.engine,
+                self.metadata,
+                group_names=get_group_names(),
+                signal_names=[EEGRawExporter.signal],
+                align_to_block=self.align_to_block,
+                t_before=self.t_before,
+            )
+        except IndexError:
+            df = pd.DataFrame()
+        return df
