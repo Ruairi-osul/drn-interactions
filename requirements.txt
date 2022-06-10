@@ -1,1 +1,15 @@
-ephys-queries
+pyarrow
+fastparquet
+pandas
+neurobox
+scipy
+seaborn
+matplotlib
+networkx
+scikit-learn
+scipy
+node2vec
+spiketimes
+elephant
+binit
+git+https://github.com/Ruairi-osul/neurobox.git

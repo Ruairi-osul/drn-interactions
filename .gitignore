@@ -8,6 +8,5 @@ __pycache__
 *tests*
 *.egg*
 .mypy*
-
 figs
 *.svg
