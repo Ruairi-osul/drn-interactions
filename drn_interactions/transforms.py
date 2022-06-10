@@ -11,6 +11,7 @@ from scipy.stats import zscore, zmap
 from typing import Callable, Dict, List, Optional
 import numpy as np
 import pandas as pd
+from neurobox.long_transforms import align_to_events, get_closest_event_idx
 
 
 def bin_spikes(
@@ -92,6 +93,49 @@ def align_spikes_to_events(
         df_events_group_colname=session_col,
         t_before=t_before,
     )
+    return df
+
+
+def align_to_data_by(
+    df_data: pd.DataFrame,
+    df_events: pd.DataFrame,
+    df_data_cell_col: str,
+    df_data_group_col: str,
+    df_events_group_colname: str,
+    df_events_timestamp_col: str,
+    time_before_event: int,
+    time_after_event: int,
+    df_data_time_col: str = "time",
+    df_data_value_col: str = "value",
+    precision: Optional[int] = None,
+) -> pd.DataFrame:
+    df = df_data.copy()
+    df = align_to_events(
+        df_data=df,
+        df_events=df_events,
+        time_before_event=time_before_event,
+        max_latency=time_after_event,
+        df_data_group_colname=df_data_group_col,
+        df_events_group_colname=df_events_group_colname,
+        df_events_timestamp_col=df_events_timestamp_col,
+        df_data_time_col=df_data_time_col,
+        returned_colname="aligned",
+    )
+    df.dropna(inplace=True)
+    if precision:
+        df["aligned"] = df["aligned"].round(precision)
+    df = get_closest_event_idx(
+        df_data=df,
+        df_events=df_events,
+        time_before=time_before_event,
+        time_after=time_after_event,
+        df_data_group_colname=df_data_group_col,
+        df_events_group_colname=df_events_group_colname,
+        df_events_timestamp_col=df_events_timestamp_col,
+        df_data_time_col=df_data_time_col,
+        returned_colname="event",
+    )
+    df["relative_to_event"] = np.where(df["aligned"] < 0, "pre_event", "post_event")
     return df
 
 

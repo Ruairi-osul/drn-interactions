@@ -1,6 +1,7 @@
 from drn_interactions.transforms import bin_spikes
 from drn_interactions.load import load_neurons, load_spikes
 import numpy as np
+import pandas as pd
 
 
 class SpikesHandler:
@@ -71,3 +72,27 @@ def pop_population_train(df_piv, exclude):
     pop_train = get_population_train(df)
     return neuron, pop_train
 
+
+class SpikesHandlerMulti(SpikesHandler):
+    @property
+    def spikes(self):
+        if self._spikes is None:
+            shs = [
+                SpikesHandler(
+                    block=block, bin_width=0.2, session_names=self.session_names, t_start=self.t_start,
+                )
+                for block in self.block
+            ]
+            spikes = shs[0].spikes
+            for sh in shs[1:]:
+                spikes2 = sh.spikes.loc[lambda x: x.spiketimes > 0].assign(
+                    spiketimes=lambda x: x.spiketimes.add(spikes.spiketimes.max())
+                )
+                spikes = pd.concat([spikes, spikes2])
+            self._spikes = spikes
+            if self.t_stop is None:
+                self.t_stop = self._spikes.spiketimes.max()
+            self._spikes = self._spikes.loc[
+                lambda x: (x.spiketimes >= self.t_start) & (x.spiketimes <= self.t_stop)
+            ]
+        return self._spikes

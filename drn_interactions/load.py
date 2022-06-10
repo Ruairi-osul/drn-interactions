@@ -153,6 +153,19 @@ def get_data_dir(project_dirname="DRN Interactions") -> Path:
     return basepath / "data"
 
 
+def get_fig_dir(project_dirname="DRN Interactions") -> Path:
+    """Get the path of the data directory
+
+    Args:
+        project_dirname (str, optional): Name of root directory in project. Defaults to "DRN Interactions".
+
+    Returns:
+        Path: Path to the data directory
+    """
+    basepath = _get_basename(project_dirname=project_dirname)
+    return basepath / "figs"
+
+
 def get_derived_data_dir(project_dirname="DRN Interactions") -> Path:
     return get_data_dir(project_dirname=project_dirname) / "derived"
 
