@@ -9,6 +9,7 @@ scikit-learn
 scipy
 node2vec
 git+https://github.com/Ruairi-osul/spiketimes.git
-elephant
+pingouin
 binit
 git+https://github.com/Ruairi-osul/neurobox.git
+# elephant
