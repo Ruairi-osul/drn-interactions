@@ -1,7 +1,6 @@
 pyarrow
 fastparquet
 pandas
-neurobox
 scipy
 seaborn
 matplotlib
