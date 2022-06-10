@@ -8,7 +8,7 @@ networkx
 scikit-learn
 scipy
 node2vec
-spiketimes
+git+https://github.com/Ruairi-osul/spiketimes.git
 elephant
 binit
 git+https://github.com/Ruairi-osul/neurobox.git
