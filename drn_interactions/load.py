@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import Tuple
 import pandas as pd
 
+BASE_DIR = None
+
 
 def load_recordings() -> pd.DataFrame:
     """Load neurons data from the data dir to a DataFrame
@@ -133,11 +135,14 @@ def get_block_names() -> Tuple[str, str, str, str, str, str, str, str, str, str]
 
 
 def _get_basename(project_dirname="DRN Interactions") -> Path:
-    return [
+    if BASE_DIR is None:
+        return [
         p
         for p in Path(__file__).absolute().parents
         if p.name.lower() == project_dirname.lower()
     ][0]
+    else:
+        return BASE_DIR
 
 
 def get_data_dir(project_dirname="DRN Interactions") -> Path:
@@ -177,3 +182,7 @@ def load_clusters(name: str = "waveforms") -> pd.DataFrame:
 
 def load_derived_generic(name):
     return pd.read_csv(get_derived_data_dir().absolute() / name)
+
+def set_project_dir(dir: Path) -> None:
+    global BASE_DIR
+    BASE_DIR = dir
