@@ -13,3 +13,4 @@ pingouin
 binit
 git+https://github.com/Ruairi-osul/neurobox.git
 # elephant
+tqdm
