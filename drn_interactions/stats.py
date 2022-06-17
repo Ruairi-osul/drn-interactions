@@ -1,7 +1,8 @@
 from spiketimes.statistics import inter_spike_intervals, cv2
 import numpy as np
-import numpy as np
 import sklearn.metrics
+from scipy.stats import mannwhitneyu
+import pandas as pd
 
 
 def cv_isi_burst(spiketrain, thresh=0.05) -> float:
@@ -84,3 +85,14 @@ def auc(arr, to_1=True):
     else:
         x = np.arange(len(arr))
     return sklearn.metrics.auc(x, arr)
+
+
+def mannwhitneyu_plusplus(x, y, names=("x", "y")):
+    out = {}
+    out[f"n_{names[0]}"] = len(x)
+    out[f"n_{names[1]}"] = len(y)
+    out[f"Mean_{names[0]}"] = np.mean(x)
+    out[f"Mean_{names[1]}"] = np.mean(y)
+    out["Diff"] = np.mean(y) - np.mean(x)
+    out["U"], out["p"] = mannwhitneyu(x, y)
+    return pd.Series(out)

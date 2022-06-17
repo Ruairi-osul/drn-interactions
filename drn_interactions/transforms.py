@@ -12,6 +12,7 @@ from typing import Callable, Dict, List, Optional
 import numpy as np
 import pandas as pd
 from neurobox.long_transforms import align_to_events, get_closest_event_idx
+from binit.bin import which_bin
 
 
 def bin_spikes(
@@ -37,6 +38,19 @@ def bin_spikes(
     return binned_spiketrain_bins_provided(
         df, bins=bins, spiketimes_col=spikes_col, spiketrain_col="neuron_id"
     )
+
+
+def segment_spikes(
+    spikes, t_start, t_stop, segment_length, spiketimes_col="spiketimes"
+):
+    segments = np.arange(t_start, t_stop, segment_length)
+    spikes["segment"] = which_bin(
+        spikes[spiketimes_col].values,
+        segments,
+        time_before=0,
+        time_after=segment_length,
+    )
+    return spikes
 
 
 def bin_spikes_interval(
@@ -99,14 +113,12 @@ def align_spikes_to_events(
 def align_to_data_by(
     df_data: pd.DataFrame,
     df_events: pd.DataFrame,
-    df_data_cell_col: str,
     df_data_group_col: str,
     df_events_group_colname: str,
     df_events_timestamp_col: str,
     time_before_event: int,
     time_after_event: int,
     df_data_time_col: str = "time",
-    df_data_value_col: str = "value",
     precision: Optional[int] = None,
 ) -> pd.DataFrame:
     df = df_data.copy()

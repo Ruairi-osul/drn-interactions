@@ -1,18 +1,28 @@
 from drn_interactions.transforms import bin_spikes
-from drn_interactions.load import load_neurons, load_spikes
+from drn_interactions.load import load_neurons_derived, load_spikes
+from spiketimes.df.surrogates import shuffled_isi_spiketrains_by
 import numpy as np
 import pandas as pd
 
 
 class SpikesHandler:
-    def __init__(self, block, bin_width, session_names=None, t_start=0, t_stop=None):
+    def __init__(
+        self,
+        block,
+        bin_width,
+        session_names=None,
+        t_start=0,
+        t_stop=None,
+        shuffle=False,
+    ):
         self.block = block
         self.bin_width = bin_width
         self.session_names = session_names
         self.t_start = t_start
         self.t_stop = t_stop
+        self.shuffle = shuffle
 
-        df_neurons = load_neurons()
+        df_neurons = load_neurons_derived()
         if session_names is None:
             self.neuron_ids = df_neurons.neuron_id.unique()
         elif session_names == "random":
@@ -36,14 +46,19 @@ class SpikesHandler:
     @property
     def spikes(self):
         if self._spikes is None:
-            self._spikes = load_spikes(self.block).loc[
+            spikes = load_spikes(self.block).loc[
                 lambda x: x.neuron_id.isin(self.neuron_ids)
             ]
             if self.t_stop is None:
-                self.t_stop = self._spikes.spiketimes.max()
-            self._spikes = self._spikes.loc[
+                self.t_stop = spikes.spiketimes.max()
+            spikes = spikes.loc[
                 lambda x: (x.spiketimes >= self.t_start) & (x.spiketimes <= self.t_stop)
             ]
+            if self.shuffle:
+                spikes = shuffled_isi_spiketrains_by(
+                    spikes, spiketimes_col="spiketimes", by_col="neuron_id", n=1
+                )
+            self._spikes = spikes
         return self._spikes
 
     @property
@@ -79,7 +94,11 @@ class SpikesHandlerMulti(SpikesHandler):
         if self._spikes is None:
             shs = [
                 SpikesHandler(
-                    block=block, bin_width=0.2, session_names=self.session_names, t_start=self.t_start,
+                    block=block,
+                    bin_width=self.bin_width,
+                    session_names=self.session_names,
+                    t_start=self.t_start,
+                    shuffle=self.shuffle,
                 )
                 for block in self.block
             ]

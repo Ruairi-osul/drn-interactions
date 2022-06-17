@@ -24,6 +24,15 @@ def load_neurons() -> pd.DataFrame:
     p = get_data_dir() / "neurons.parquet.gzip"
     return pd.read_parquet(p)
 
+def load_neurons_derived() -> pd.DataFrame:
+    """Load neuron data present after preprocessing
+
+    Returns:
+        pd.DataFrame: Neuron data
+    """
+    df_neuron_props = pd.read_csv(get_derived_data_dir() / "burst_features.csv")
+    df_clusters = pd.read_csv(get_derived_data_dir() / "clusters.csv")
+    return df_neuron_props.merge(df_clusters)
 
 def load_distances() -> pd.DataFrame:
     """Load distance data
