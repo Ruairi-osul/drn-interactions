@@ -1,16 +1,22 @@
 pyarrow
 fastparquet
+tqdm
 pandas
-scipy
+numpy
+numba
+scipy>=1.6
 seaborn
 matplotlib
-networkx
 scikit-learn
-scipy
-node2vec
-git+https://github.com/Ruairi-osul/spiketimes.git
 pingouin
+statsmodels
+umap-learn
+node2vec
+networkx
+scikit-network
 binit
-git+https://github.com/Ruairi-osul/neurobox.git
-# elephant
-tqdm
+spiketimes @ git+https://github.com/Ruairi-osul/spiketimes.git
+neurobox @ git+https://github.com/Ruairi-osul/neurobox.git
+mypy
+jupyter
+black
