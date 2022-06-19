@@ -224,6 +224,23 @@ class EvokedCounts:
             cov = cov.merge(responders.reset_index()).query("p < 0.05")
         return cov
 
+    def plot_neuron(
+        self,
+        evoked_counts: pd.DataFrame,
+        neuron: int,
+        ax: Optional[plt.Axes] = None,
+        bins="auto",
+    ) -> plt.Axes:
+        if ax is None:
+            _, ax = plt.subplots(figsize=(5, 5))
+        ax = evoked_counts.query("neuron_id == @neuron")["value"].hist(
+            color="black", bins=bins
+        )
+        ax.set_ylabel("Trial Counts")
+        ax.set_xlabel("Evoked Spikes")
+        sns.despine()
+        return ax
+
 
 class ShockPlotter:
     def __init__(self):
