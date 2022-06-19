@@ -1,11 +1,17 @@
+from typing import Tuple, Union, Dict
+from .spikes import SpikesHandlerMulti
+from .stats import p_adjust
+from .plots import PAL_GREY_BLACK
 from pymer4.models import Lmer
-from pymer4.utils import con2R
 from rpy2.robjects import pandas2ri
 import numpy as np
 from scipy.stats import zscore
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 import pingouin as pg
 from tqdm import tqdm
+from matplotlib.figure import Figure
 
 
 class SlowTSResponders:
@@ -24,13 +30,21 @@ class SlowTSResponders:
         # move to a spikes class
         return df_long.copy().loc[lambda x: x[value_col] != 0]
 
-    def get_responders(**kwargs):
+    def get_responders(
+        self,
+        df_binned_piv: pd.DataFrame,
+        clusters: pd.DataFrame = None,
+        exclude_transition: bool = False,
+    ):
         ...
 
 
 class SlowTSRespondersMixed(SlowTSResponders):
     def get_responders(
-        self, df_binned_piv: pd.DataFrame, clusters=None, exclude_trasition=False
+        self,
+        df_binned_piv: pd.DataFrame,
+        clusters: pd.DataFrame = None,
+        exclude_transition=False,
     ):
         pandas2ri.activate()
         out = {}
@@ -44,7 +58,7 @@ class SlowTSRespondersMixed(SlowTSResponders):
         df1["block"] = np.where(
             df1["bin"] < 0, "pre", np.where(df1["bin"] < 600, "1", "2")
         )
-        if exclude_trasition:
+        if exclude_transition:
             df1 = df1.loc[~df1.bin.between(550, 800)]
 
         if clusters is None:
@@ -79,9 +93,9 @@ class SlowTSRespondersAnova(SlowTSResponders):
     def get_responders(
         self,
         df_binned_piv: pd.DataFrame,
-        clusters=None,
+        clusters: pd.DataFrame = None,
+        exclude_transition=False,
         fit_unit_level_models=False,
-        exclude_trasition=False,
     ):
         if self.remove_empty:
             df_binned_piv = self.remove_empty_piv(df_binned_piv)
@@ -92,7 +106,7 @@ class SlowTSRespondersAnova(SlowTSResponders):
         df1["block"] = np.where(
             df1["bin"] < 0, "1pre", np.where(df1["bin"] < 600, "2shock", "3post")
         )
-        if exclude_trasition:
+        if exclude_transition:
             df1 = df1.loc[~df1.bin.between(550, 800)]
 
         out = {}
@@ -101,13 +115,22 @@ class SlowTSRespondersAnova(SlowTSResponders):
             out["anova"] = pg.rm_anova(
                 data=df1, dv="value", within="block", subject="neuron_id"
             ).round(3)
-            out["contrasts"] = pg.pairwise_ttests(
-                data=df1,
-                dv="value",
-                within="block",
-                subject="neuron_id",
-                padjust="fdr_bh",
-            ).round(3)
+            out["contrasts"] = (
+                pg.pairwise_ttests(
+                    data=df1,
+                    dv="value",
+                    within="block",
+                    subject="neuron_id",
+                    padjust="fdr_bh",
+                )
+                .assign(p=lambda x: p_adjust(x["p-unc"]))
+                .assign(Sig=lambda x: np.where(x.p < 0.05, "*", ""))
+                .drop(
+                    ["Paired", "Parametric", "alternative", "p-unc", "BF10", "hedges"],
+                    axis=1,
+                )
+                .round(3)
+            )
         else:
             df1 = df1.merge(clusters)
             out["anova"] = pg.mixed_anova(
@@ -117,14 +140,25 @@ class SlowTSRespondersAnova(SlowTSResponders):
                 between="wf_3",
                 subject="neuron_id",
             ).round(3)
-            out["contrasts"] = pg.pairwise_ttests(
-                data=df1,
-                dv="value",
-                within="block",
-                between="wf_3",
-                subject="neuron_id",
-                interaction=False,
-            ).round(3)
+            out["contrasts"] = (
+                pg.pairwise_ttests(
+                    data=df1,
+                    dv="value",
+                    within="block",
+                    between="wf_3",
+                    subject="neuron_id",
+                    interaction=True,
+                    within_first=True,
+                )
+                .query("Contrast != 'wf_3' and block != '1pre'")
+                .assign(p=lambda x: p_adjust(x["p-unc"]))
+                .assign(Sig=lambda x: np.where(x.p < 0.05, "*", ""))
+                .drop(
+                    ["Paired", "Parametric", "alternative", "p-unc", "BF10", "hedges"],
+                    axis=1,
+                )
+                .round(3)
+            )
 
         if fit_unit_level_models:
             pairwise = []
@@ -134,7 +168,9 @@ class SlowTSRespondersAnova(SlowTSResponders):
                 df_anova = pg.anova(data=dfsub, dv="value", between="block").round(3)
                 anovas.append(df_anova.assign(neuron_id=neuron))
                 df_pairwise = pg.pairwise_tukey(
-                    data=dfsub, dv="value", between="block",
+                    data=dfsub,
+                    dv="value",
+                    between="block",
                 ).round(3)
                 pairwise.append(df_pairwise.assign(neuron_id=neuron))
 
@@ -179,6 +215,112 @@ class SlowTSRespondersAnova(SlowTSResponders):
 
         return self
 
+    def _plot_single_unit_effects(
+        self,
+        pre_to_shock: pd.DataFrame,
+        shock_to_post: pd.DataFrame,
+        pre_to_post: pd.DataFrame,
+    ) -> Figure:
+        f, ax = plt.subplots(nrows=3, figsize=(5, 8), sharey=False, sharex=True)
+        sns.histplot(
+            data=pre_to_shock.assign(sig=lambda x: x["p_adj"] < 0.05),
+            x="diff_inv",
+            hue="sig",
+            ax=ax[0],
+            alpha=1,
+            bins=50,
+            palette=PAL_GREY_BLACK[::-1],
+        )
 
-class SlowTSRespondersMWU:
+        sns.histplot(
+            data=shock_to_post.assign(sig=lambda x: x["p_adj"] < 0.05),
+            x="diff_inv",
+            hue="sig",
+            ax=ax[1],
+            alpha=1,
+            bins=50,
+            palette=PAL_GREY_BLACK[::-1],
+        )
+
+        sns.histplot(
+            data=pre_to_post,
+            x="diff_inv",
+            hue="sig",
+            ax=ax[2],
+            alpha=1,
+            bins=50,
+            palette=PAL_GREY_BLACK[::-1],
+        )
+        ax[0].legend().remove()
+        ax[1].legend().remove()
+        ax[2].legend().remove()
+
+        ax[0].set_title("Pre to Shock")
+        ax[1].set_title("Shock to Post")
+        ax[2].set_title("Pre to Post")
+
+        ax[2].set_xlabel("Spike Rate Change\n[Z Score]")
+        sns.despine()
+        plt.tight_layout()
+        return f
+
+    def plot_unit_effects(
+        self,
+        clusters=None,
+    ) -> Union[Figure, Dict[str, Figure]]:
+        pre_to_shock = (
+            self.results_["pre_to_shock"].copy().assign(sig=lambda x: x.p_adj < 0.05)
+        )
+        shock_to_post = (
+            self.results_["shock_to_post"].copy().assign(sig=lambda x: x.p_adj < 0.05)
+        )
+        pre_to_post = (
+            self.results_["pre_to_post"].copy().assign(sig=lambda x: x.p_adj < 0.05)
+        )
+        if clusters is not None:
+            out: Dict[str, Figure] = {}
+            pre_to_shock = pre_to_shock.merge(clusters)
+            shock_to_post = shock_to_post.merge(clusters)
+            pre_to_post = pre_to_post.merge(clusters)
+            for cluster in clusters["wf_3"].unique():
+                out[cluster] = self._plot_single_unit_effects(
+                    pre_to_shock.query("wf_3 == @cluster"),
+                    shock_to_post.query("wf_3 == @cluster"),
+                    pre_to_post.query("wf_3 == @cluster"),
+                )
+            return out
+        else:
+            return self._plot_single_unit_effects(
+                pre_to_shock, shock_to_post, pre_to_post
+            )
+
+
+class SlowTSRespondersMWU(SlowTSResponders):
     ...
+
+
+def plot_pop(
+    session_name: str,
+    bin_width: float = 10,
+    figsize: Tuple[float, float] = (5, 3),
+    title: bool = True,
+    t_start: float = -600,
+    t_stop: float = 1200,
+    z: bool = False,
+) -> plt.Axes:
+    _, ax = plt.subplots(figsize=figsize)
+    df = SpikesHandlerMulti(
+        block=["base_shock", "post_base_shock"],
+        bin_width=bin_width,
+        session_names=[session_name],
+        t_start=t_start,
+        t_stop=t_stop,
+    ).binned_piv
+    pop = df.sum(axis=1).to_frame()
+    if z:
+        pop = pop.apply(zscore)
+    ax = pop.plot(ax=ax, color="black")
+    if title:
+        ax.set_title(session_name)
+    sns.despine()
+    return ax
