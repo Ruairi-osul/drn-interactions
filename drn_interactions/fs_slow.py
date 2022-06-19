@@ -168,9 +168,7 @@ class SlowTSRespondersAnova(SlowTSResponders):
                 df_anova = pg.anova(data=dfsub, dv="value", between="block").round(3)
                 anovas.append(df_anova.assign(neuron_id=neuron))
                 df_pairwise = pg.pairwise_tukey(
-                    data=dfsub,
-                    dv="value",
-                    between="block",
+                    data=dfsub, dv="value", between="block",
                 ).round(3)
                 pairwise.append(df_pairwise.assign(neuron_id=neuron))
 
@@ -264,10 +262,7 @@ class SlowTSRespondersAnova(SlowTSResponders):
         plt.tight_layout()
         return f
 
-    def plot_unit_effects(
-        self,
-        clusters=None,
-    ) -> Union[Figure, Dict[str, Figure]]:
+    def plot_unit_effects(self, clusters=None,) -> Union[Figure, Dict[str, Figure]]:
         pre_to_shock = (
             self.results_["pre_to_shock"].copy().assign(sig=lambda x: x.p_adj < 0.05)
         )
@@ -324,3 +319,16 @@ def plot_pop(
         ax.set_title(session_name)
     sns.despine()
     return ax
+
+
+def population_raster(
+    session_name: str,
+    bin_width: float = 1,
+    figsize: Tuple[float, float] = (5, 3),
+    title: bool = True,
+    t_start: float = -600,
+    t_stop: float = 1200,
+    tfidf: bool = False,
+):
+    # TODO
+    ...
