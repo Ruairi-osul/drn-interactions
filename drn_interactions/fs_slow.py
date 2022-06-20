@@ -1,4 +1,6 @@
-from typing import Tuple, Union, Dict
+from typing import Tuple, Union, Dict, Optional
+
+from sklearn import cluster
 from .spikes import SpikesHandlerMulti
 from .stats import p_adjust
 from .plots import PAL_GREY_BLACK
@@ -6,6 +8,7 @@ from pymer4.models import Lmer
 from rpy2.robjects import pandas2ri
 import numpy as np
 from scipy.stats import zscore
+from sklearn.feature_extraction.text import TfidfTransformer
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -323,12 +326,41 @@ def plot_pop(
 
 def population_raster(
     session_name: str,
+    clusters: Optional[pd.DataFrame] = None,
     bin_width: float = 1,
     figsize: Tuple[float, float] = (5, 3),
     title: bool = True,
     t_start: float = -600,
     t_stop: float = 1200,
     tfidf: bool = False,
-):
-    # TODO
-    ...
+) -> plt.Axes:
+    _, ax = plt.subplots(figsize=figsize)
+    df = SpikesHandlerMulti(
+        block=["base_shock", "post_base_shock"],
+        session_names=[session_name],
+        bin_width=bin_width,
+        t_start=t_start,
+        t_stop=t_stop,
+    ).binned_piv
+    if clusters is not None:
+        session_neurons = df.columns
+        clusters = clusters.loc[lambda x: x.neuron_id.isin(session_neurons)]
+        clusters = clusters.sort_values("wf_3")
+        idx = clusters.neuron_id.values.tolist()
+        df = df[idx]
+    vals = df.values.T
+    if tfidf:
+        vals = TfidfTransformer().fit_transform(vals.T).toarray().T
+    sns.heatmap(
+        data=vals,
+        cmap="Greys",
+        ax=ax,
+        cbar=False,
+        xticklabels=False,
+        yticklabels=False,
+        robust=True,
+    )
+    ax.axis("off")
+    if title:
+        ax.set_title(session_name)
+    return ax
