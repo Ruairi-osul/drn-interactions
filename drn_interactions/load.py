@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Tuple
 import pandas as pd
+import numpy as np
 
 BASE_DIR = None
 
@@ -24,6 +25,7 @@ def load_neurons() -> pd.DataFrame:
     p = get_data_dir() / "neurons.parquet.gzip"
     return pd.read_parquet(p)
 
+
 def load_neurons_derived() -> pd.DataFrame:
     """Load neuron data present after preprocessing
 
@@ -33,6 +35,7 @@ def load_neurons_derived() -> pd.DataFrame:
     df_neuron_props = pd.read_csv(get_derived_data_dir() / "burst_features.csv")
     df_clusters = pd.read_csv(get_derived_data_dir() / "clusters.csv")
     return df_neuron_props.merge(df_clusters)
+
 
 def load_distances() -> pd.DataFrame:
     """Load distance data
@@ -85,6 +88,16 @@ def load_events(block_name: str) -> pd.DataFrame:
 def load_waveforms() -> pd.DataFrame:
     p = get_data_dir() / "waveforms.parquet.gzip"
     return pd.read_parquet(p)
+
+
+def get_drug_groups() -> pd.DataFrame:
+    return (
+        load_recordings()[["session_name", "group_name", "experiment_name"]]
+        .query("experiment_name != 'ESHOCK'")
+        .assign(
+            drug=lambda x: np.where(x["group_name"].str.contains("cit"), "cit", "sal")
+        )
+    )
 
 
 def get_group_names() -> Tuple[str, str, str, str, str, str]:
@@ -146,10 +159,10 @@ def get_block_names() -> Tuple[str, str, str, str, str, str, str, str, str, str]
 def _get_basename(project_dirname="DRN Interactions") -> Path:
     if BASE_DIR is None:
         return [
-        p
-        for p in Path(__file__).absolute().parents
-        if p.name.lower() == project_dirname.lower()
-    ][0]
+            p
+            for p in Path(__file__).absolute().parents
+            if p.name.lower() == project_dirname.lower()
+        ][0]
     else:
         return BASE_DIR
 
@@ -191,6 +204,7 @@ def load_clusters(name: str = "waveforms") -> pd.DataFrame:
 
 def load_derived_generic(name):
     return pd.read_csv(get_derived_data_dir().absolute() / name)
+
 
 def set_project_dir(dir: Path) -> None:
     global BASE_DIR
