@@ -1,9 +1,8 @@
-from typing import Tuple, Union, Dict, Optional
-
-from sklearn import cluster
+from typing import Tuple, Union, Dict, Optional, List
 from .spikes import SpikesHandlerMulti
 from .stats import p_adjust
 from .plots import PAL_GREY_BLACK
+from .load import load_neurons_derived, get_shock_sessions
 from pymer4.models import Lmer
 from rpy2.robjects import pandas2ri
 import numpy as np
@@ -15,6 +14,29 @@ import seaborn as sns
 import pingouin as pg
 from tqdm import tqdm
 from matplotlib.figure import Figure
+
+
+def load_slow_ts_data(
+    session_names: Optional[List[str]] = None, bin_width: float = 1,
+):
+    neurons = load_neurons_derived().merge(get_shock_sessions())
+    spikes = SpikesHandlerMulti(
+        block=["base_shock", "post_base_shock"],
+        bin_width=bin_width,
+        session_names=session_names,
+        t_start=-600,
+        t_stop=1200,
+    ).binned_piv
+    spikes = spikes[
+        [c for c in spikes.columns if c in neurons["neuron_id"].unique().tolist()]
+    ]
+    neurons = neurons.query("neuron_id in @spikes.columns")
+    clusters = neurons[["neuron_id", "wf_3", "session_name"]]
+    block = np.where(
+        spikes.index < 0, "pre", np.where(spikes.index < 600, "shock", "post")
+    )
+    block = pd.Series(block, index=spikes.index, name="block")
+    return spikes, block, clusters
 
 
 class SlowTSResponders:
