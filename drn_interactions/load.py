@@ -100,6 +100,15 @@ def get_drug_groups() -> pd.DataFrame:
     )
 
 
+def get_shock_sessions() -> pd.DataFrame:
+    return (
+        load_spikes("base_shock")[["neuron_id"]]
+        .drop_duplicates()
+        .merge(load_neurons_derived()[["neuron_id", "session_name"]])[["session_name"]]
+        .drop_duplicates()
+    )
+
+
 def get_group_names() -> Tuple[str, str, str, str, str, str]:
     return (
         "acute_citalopram",
