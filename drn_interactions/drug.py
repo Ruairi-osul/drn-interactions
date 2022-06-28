@@ -14,12 +14,16 @@ import matplotlib.pyplot as plt
 from sklearn.feature_extraction.text import TfidfTransformer
 
 
-def load_drug_data():
+def load_drug_data(block="chal", t_stop=1200, bin_width=1):
     neurons = load_neurons_derived().merge(get_drug_groups())
     clusters = neurons[["neuron_id", "drug", "wf_3", "session_name"]]
     sessions = neurons["session_name"].unique().tolist()
     spikes = SpikesHandler(
-        block="chal", bin_width=1, session_names=sessions, t_start=-600, t_stop=1200
+        block=block,
+        bin_width=bin_width,
+        session_names=sessions,
+        t_start=-600,
+        t_stop=t_stop,
     ).binned
     spikes = spikes.merge(clusters[["neuron_id", "drug"]])
     spikes["block"] = np.where(spikes["bin"] < 0, "pre", "post")
@@ -84,6 +88,7 @@ class DrugResponders:
         df_binned: pd.DataFrame,
         clusters: Optional[pd.DataFrame] = None,
         z: bool = False,
+        abs_diff_thresh: float = 0,
     ):
         # if clusters is not None:
         if z:
@@ -97,6 +102,9 @@ class DrugResponders:
             .assign(sig=lambda x: x["p"] < 0.05)
             .reset_index()
             .round(3)
+        )
+        responders["sig"] = np.where(
+            responders["Diff"].abs() < abs_diff_thresh, False, responders["sig"]
         )
         if clusters is not None:
             responders = responders.merge(clusters)
@@ -113,15 +121,17 @@ class DrugResponders:
         responders: pd.DataFrame,
         clusters: Optional[pd.DataFrame] = None,
         bins="auto",
-    ):
+        aspect=2,
+        height=3
+    ) -> sns.FacetGrid:
         if clusters is None:
             g = sns.FacetGrid(
-                responders, row="wf_3", sharey=False, sharex=True, aspect=2
+                responders, row="wf_3", sharey=False, sharex=True, aspect=aspect, height=height
             )
         else:
             responders = responders.merge(clusters)
             g = sns.FacetGrid(
-                responders, row="wf_3", col="drug", sharey=False, sharex=True, aspect=2
+                responders, row="wf_3", col="drug", sharey=False, sharex=True, aspect=aspect,height=height
             )
         return g.map_dataframe(
             sns.histplot,
@@ -137,6 +147,7 @@ class DrugResponders:
 
 def population_raster(
     session_name: str,
+    block: str = "chal",
     clusters: Optional[pd.DataFrame] = None,
     bin_width: float = 1,
     figsize: Tuple[float, float] = (5, 3),
@@ -147,7 +158,7 @@ def population_raster(
 ) -> plt.Axes:
     _, ax = plt.subplots(figsize=figsize)
     df = SpikesHandler(
-        block="chal",
+        block=block,
         session_names=[session_name],
         bin_width=bin_width,
         t_start=t_start,
