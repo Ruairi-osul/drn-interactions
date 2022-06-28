@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 import pandas as pd
 import numpy as np
 
@@ -78,6 +78,22 @@ def load_lfp(block_name: str) -> pd.DataFrame:
 def load_lfp_ts(block_name: str) -> pd.DataFrame:
     p = get_data_dir() / block_name / "lfp_band_ts.parquet.gzip"
     return pd.read_parquet(p)
+
+
+def get_eeg_sessions(eeg_path: Optional[Path] = None) -> pd.DataFrame:
+    if eeg_path is None:
+        eeg_states = load_derived_generic("eeg_states.csv").rename(
+            columns={"cluster": "state"}
+        )
+    else:
+        eeg_states = pd.read_csv(eeg_path)
+    neurons = load_neurons_derived()
+    return (
+        neurons[["session_name"]]
+        .drop_duplicates()
+        .merge(eeg_states[["session_name"]].drop_duplicates())["session_name"]
+        .unique()
+    )
 
 
 def load_events(block_name: str) -> pd.DataFrame:
