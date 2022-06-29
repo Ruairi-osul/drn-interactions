@@ -4,8 +4,6 @@ from drn_interactions.spikes import SpikesHandler
 from binit.bin import which_bin
 import warnings
 from neurobox.long_transforms import get_closest_event
-
-
 import pandas as pd
 
 
@@ -22,8 +20,8 @@ class BrainStateUtils:
         self.eeg_time_col = eeg_time_col
         self.eeg_state_col = eeg_state_col
 
-    @staticmethod
-    def _get_session_name(df: pd.DataFrame) -> pd.DataFrame:
+    
+    def _get_session_name(self, df: pd.DataFrame) -> pd.DataFrame:
         sessions = load_neurons_derived()[["neuron_id", "session_name"]]
         df = df.merge(sessions)
         return df
@@ -34,7 +32,6 @@ class BrainStateUtils:
         eeg_states: pd.DataFrame,
         df_data_time_col: str = "bin",
     ) -> pd.DataFrame:
-        df_data = self._get_session_name(df_data)
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
             df_data = get_closest_event(
@@ -55,7 +52,7 @@ class BrainStateUtils:
         self, df_data: pd.DataFrame, eeg_states: pd.DataFrame
     ) -> pd.DataFrame:
         df = df_data.merge(
-            eeg_states[[self.eeg_time_col, self.eeg_state_col, "session_name"]],
+            eeg_states[[self.eeg_time_col, self.eeg_state_col, "session_name"]].drop_duplicates(),
             left_on=["session_name", "eeg_bin"],
             right_on=["session_name", self.eeg_time_col],
         )
@@ -66,6 +63,7 @@ class BrainStateUtils:
         self, sh: SpikesHandler, eeg_states: pd.DataFrame
     ) -> pd.DataFrame:
         spikes = sh.binned.copy()
+        spikes = self._get_session_name(spikes)
         spikes = self._align_data_to_states(spikes, eeg_states, df_data_time_col="bin")
         df = self._get_state_from_aligned(spikes, eeg_states)
         return df
@@ -73,8 +71,18 @@ class BrainStateUtils:
     def align_segmentedspikes_state(
         self, segmented_spikes: pd.DataFrame, eeg_states: pd.DataFrame
     ) -> pd.DataFrame:
+        segmented_spikes = self._get_session_name(segmented_spikes)
         spikes = self._align_data_to_states(
             segmented_spikes, eeg_states, df_data_time_col="segment"
+        )
+        df = self._get_state_from_aligned(spikes, eeg_states)
+        return df
+
+    def align_eegraw_state(
+        self, eeg_raw: pd.DataFrame, eeg_states: pd.DataFrame
+    ) -> pd.DataFrame:
+        spikes = self._align_data_to_states(
+            eeg_raw, eeg_states, df_data_time_col="time"
         )
         df = self._get_state_from_aligned(spikes, eeg_states)
         return df

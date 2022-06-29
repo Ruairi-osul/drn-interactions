@@ -65,6 +65,11 @@ def load_eeg(block_name: str) -> pd.DataFrame:
     return pd.read_parquet(p)
 
 
+def load_eeg_raw(block_name: str) -> pd.DataFrame:
+    p = get_data_dir() / block_name / "eeg_raw.parquet.gzip"
+    return pd.read_parquet(p)
+
+
 def load_eeg_ts(block_name: str) -> pd.DataFrame:
     p = get_data_dir() / block_name / "eeg_band_ts.parquet.gzip"
     return pd.read_parquet(p)

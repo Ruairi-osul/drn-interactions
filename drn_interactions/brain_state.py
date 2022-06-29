@@ -45,7 +45,6 @@ def get_state_long(spikes, eeg, index_name="bin", eeg_time_col="timepoint_s"):
     )
 
 
-
 class BSResonders:
     def __init__(
         self,
@@ -153,6 +152,8 @@ class BSResonders:
         clusters: pd.DataFrame = None,
         bins: Any = "auto",
         cmap: Any = None,
+        height: float = 3,
+        aspect: float = 2,
     ) -> Union[plt.Axes, sns.FacetGrid]:
         """Plot Responders
 
@@ -160,6 +161,9 @@ class BSResonders:
             responders (pd.DataFrame, optional): Output of get_responders method. Defaults to None.
             clusters (pd.DataFrame, optional): [neuron_id, wf_3]. Defaults to None.
             bins (Any, optional): To be passed to sns.histplot. Defaults to "auto".
+            cmap (Any, optional): To be passed to sns.histplot. Defaults to None.
+            height (float, optional): Height of the plot. Defaults to 3.
+            aspect (float, optional): Aspect ratio of the plot. Defaults to 2.
 
         Returns:
             Union[plt.Axes, sns.FacetGrid]: Plot Object. Facet Grid if clusters specified.
@@ -171,7 +175,7 @@ class BSResonders:
             cmap = PAL_GREY_BLACK
 
         if clusters is None:
-            _, ax = plt.subplots(figsize=(5, 5))
+            _, ax = plt.subplots(figsize=(height, height * aspect))
             ax = sns.histplot(
                 data=dfp,
                 x="Diff",
@@ -190,7 +194,11 @@ class BSResonders:
         else:
             dfp = dfp.merge(clusters)
             g = sns.FacetGrid(
-                dfp, row=self.clusters_neurontype_col, sharey=False, aspect=2
+                dfp,
+                row=self.clusters_neurontype_col,
+                sharey=False,
+                height=height,
+                aspect=aspect,
             ).map_dataframe(
                 sns.histplot,
                 x="Diff",
