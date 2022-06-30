@@ -1,6 +1,5 @@
 class ClusterUtils:
-    """A Container for a set of methods usful for working with neuron types.
-    """
+    """A Container for a set of methods usful for working with neuron types."""
 
     def cluster_from_piv(self, df_binned_piv, clusters):
         neurons_by_cluster = {
@@ -14,4 +13,3 @@ class ClusterUtils:
             for cluster, cluster_neurons in neurons_by_cluster.items()
         }
         return df_by_cluster
-

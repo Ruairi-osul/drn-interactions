@@ -1,5 +1,5 @@
 import numpy as np
-from drn_interactions.load import load_neurons_derived
+from drn_interactions.load import load_neurons_derived, load_derived_generic
 from drn_interactions.spikes import SpikesHandler
 from binit.bin import which_bin
 import warnings
@@ -20,7 +20,6 @@ class BrainStateUtils:
         self.eeg_time_col = eeg_time_col
         self.eeg_state_col = eeg_state_col
 
-    
     def _get_session_name(self, df: pd.DataFrame) -> pd.DataFrame:
         sessions = load_neurons_derived()[["neuron_id", "session_name"]]
         df = df.merge(sessions)
@@ -52,7 +51,9 @@ class BrainStateUtils:
         self, df_data: pd.DataFrame, eeg_states: pd.DataFrame
     ) -> pd.DataFrame:
         df = df_data.merge(
-            eeg_states[[self.eeg_time_col, self.eeg_state_col, "session_name"]].drop_duplicates(),
+            eeg_states[
+                [self.eeg_time_col, self.eeg_state_col, "session_name"]
+            ].drop_duplicates(),
             left_on=["session_name", "eeg_bin"],
             right_on=["session_name", self.eeg_time_col],
         )
