@@ -12,7 +12,6 @@ pingouin
 statsmodels
 pymer4
 umap-learn
-node2vec
 networkx
 scikit-network
 binit
