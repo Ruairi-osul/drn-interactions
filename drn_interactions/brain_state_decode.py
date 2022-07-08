@@ -4,12 +4,14 @@ from sklearn.base import clone
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from typing import Callable, Dict, Sequence
+from typing import Callable, Dict
 from drn_interactions.brain_state import get_state_piv
 from typing import Optional, List
 from drn_interactions.load import load_neurons_derived, load_derived_generic, load_eeg
 from drn_interactions.spikes import SpikesHandler
 from copy import deepcopy
+from sklearn.metrics import r2_score
+from sklearn.feature_selection import SelectKBest, f_regression
 
 
 def shuffle_both(X, y):
@@ -104,7 +106,7 @@ class StateEncoder:
         estimator,
         cv,
         shuffler=None,
-        scoring="f1_macro",
+        scoring=r2_score,
         state_colname="state",
         verbose: bool = False,
     ):
@@ -115,7 +117,7 @@ class StateEncoder:
         self.state_colname = state_colname
         self.verbose = verbose
 
-    def get_pop_scores(self, spikes: pd.DataFrame, states: pd.Series):
+    def run_pop(self, spikes, states):
         neurons = spikes.columns
         df_all = spikes
         out = {}
@@ -123,28 +125,10 @@ class StateEncoder:
             y = df_all[neuron].values
             X = df_all.drop(neuron, axis=1)
             out[neuron] = self._run_single(X, y, do_clone=True)
+        self.pop_scores_ = out
+        return self
 
-        return out
-
-    def get_dropout_scores(self, spikes: pd.DataFrame, states: pd.Series, clusters: pd.DataFrame):
-        neurons = spikes.columns
-        df_all = spikes
-        out = {}
-        neuron_types = clusters.wf_3.unique()
-        for neuron_type in tqdm(neuron_types, disable=not self.verbose):
-            to_drop = clusters[clusters.wf_3 == neuron_type].neuron_id.values
-            preds = spikes.copy()[[c for c in spikes.columns if c not in to_drop]]
-            for neuron in tqdm(neurons, disable=not self.verbose):
-                y = df_all[neuron].values
-                if neuron in preds.columns:
-                    X = preds.drop(neuron, axis=1)
-                else:
-                    X = preds
-                out[neuron] = self._run_single(X, y, do_clone=True)
-        return out
-
-
-    def get_state_scores(self, spikes: pd.DataFrame, states: pd.Series):
+    def run_state(self, spikes, states):
         neurons = spikes.columns
         out = {}
         states = states.to_frame()
@@ -152,9 +136,10 @@ class StateEncoder:
             y = spikes[neuron].values
             X = states
             out[neuron] = self._run_single(X, y, do_clone=True)
-        return out
+        self.state_scores_ = out
+        return self
 
-    def get_combined_scores(self, spikes: pd.DataFrame, states: pd.Series):
+    def run_combined(self, spikes: pd.DataFrame, states: pd.Series):
         neurons = spikes.columns
         df_all = spikes.join(states).copy()
         out = {}
@@ -162,14 +147,137 @@ class StateEncoder:
             y = spikes[neuron].values
             X = df_all.drop(neuron, axis=1)
             out[neuron] = self._run_single(X, y, do_clone=True)
+        self.combined_scores_ = out
+        return self
+
+    def run_dropout(
+        self,
+        spikes: pd.DataFrame,
+        states: pd.Series,
+        clusters: pd.DataFrame,
+        cluster_col: str = "wf_3",
+        neuron_col: str = "neuron_id",
+    ):
+        neurons = spikes.columns
+        df_all = spikes
+        outer_dict = {}
+        neuron_types = clusters[cluster_col].unique()
+        for neuron_type in tqdm(neuron_types, disable=not self.verbose):
+            to_drop = clusters[clusters[cluster_col] == neuron_type][
+                neuron_col
+            ].values.tolist()
+            preds = spikes.copy()[[c for c in spikes.columns if c not in to_drop]]
+            inner_dict = {}
+            for neuron in neurons:
+                y = df_all[neuron].values
+                if neuron in preds.columns:
+                    X = preds.drop(neuron, axis=1)
+                else:
+                    X = preds
+                cv_scores = self._run_single(X, y, do_clone=True)
+                inner_dict[neuron] = np.mean(cv_scores["test_score"])
+            outer_dict[neuron_type] = inner_dict
+        self.dropout_scores_ = outer_dict
+
+    def run_limit(
+        self,
+        spikes: pd.DataFrame,
+        states: pd.Series,
+        min_features: int = 1,
+        max_features: Optional[int] = None,
+    ):
+        max_features = (spikes.shape[1] - 1) if max_features is None else max_features
+
+        outer_dict = {}
+        for neuron in tqdm(spikes.columns, disable=not self.verbose):
+            inner_dict = {}
+            for k_features in range(min_features, max_features + 1):
+                estimator_k = clone(self.estimator)
+                estimator_k.regressor.steps.insert(
+                    -1,
+                    (
+                        "selector",
+                        SelectKBest(k=k_features, score_func=f_regression),
+                    ),
+                )
+                y = spikes[neuron].values
+                X = spikes.drop(neuron, axis=1)
+                cv_scores = self._run_single(X, y, do_clone=True, estimator=estimator_k)
+                inner_dict[k_features] = np.mean(cv_scores["test_score"])
+            outer_dict[neuron] = inner_dict
+        self.limit_scores_ = outer_dict
+
+    def get_limit_scores(self) -> Dict:
+        return self.limit_scores_
+
+    def _get_test_scores(self, scores_dict):
+        return {
+            neuron_id: scores["test_score"] for neuron_id, scores in scores_dict.items()
+        }
+
+    def _get_best_estimator(self, scores_dict):
+        estimators = {}
+        for neuron_id, scores in scores_dict.items():
+            best_score_idx = np.argmax(scores["test_score"])
+            estimator = scores["estimator"][best_score_idx]
+            estimators[neuron_id] = estimator
+        return estimators
+
+    def _get_feature_importances(self, scores_dict):
+        estimator_dict = self._get_best_estimator(scores_dict)
+        out = {}
+        for neuron_id, estimator in estimator_dict.items():
+            all_features = estimator.feature_names_in_
+            feature_importances = estimator.regressor_.steps[-1][
+                -1
+            ].feature_importances_
+            out[neuron_id] = dict(zip(all_features, feature_importances))
         return out
 
-    def _run_single(self, X, y, do_clone=False):
-        estimator = self.estimator if not do_clone else clone(self.estimator)
+    def _k_best_features(self, fi_dict, k):
+        fi = list(fi_dict.values())
+        features = np.array(list(fi_dict.keys()))
+        idx = np.argsort(fi)[::-1]
+
+        return features[idx[:k]]
+
+    def get_pop_scores(
+        self,
+    ):
+        return self._get_test_scores(self.pop_scores_)
+
+    def get_state_scores(
+        self,
+    ):
+        return self._get_test_scores(self.state_scores_)
+
+    def get_combined_scores(
+        self,
+    ):
+        return self._get_test_scores(self.combined_scores_)
+
+    def get_dropout_scores(
+        self,
+    ):
+        return self.dropout_scores_
+
+    def _run_single(self, X, y, do_clone=False, estimator=None):
+        if estimator is None:
+            estimator = self.estimator if not do_clone else clone(self.estimator)
         cv = self.cv if not do_clone else deepcopy(self.cv)
         if do_clone:
             cv.random_state = np.random.randint(0, 100000)
-        return cross_val_score(estimator, X, y, cv=cv, scoring=self.scoring)
+        estimators = []
+        test_scores = []
+        for train_index, test_index in cv.split(X):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+            estimator.fit(X_train, y_train)
+            pred = estimator.predict(X_test)
+            estimators.append(estimator)
+            test_scores.append(self.scoring(y_test, pred))
+        cv_results = dict(estimator=estimators, test_score=test_scores)
+        return cv_results
 
 
 class StateDecodeDataLoader:
