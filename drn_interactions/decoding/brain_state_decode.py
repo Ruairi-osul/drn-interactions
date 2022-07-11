@@ -5,42 +5,14 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from typing import Callable, Dict
-from drn_interactions.brain_state import get_state_piv
+from drn_interactions.transforms.brain_state_transforms import get_state_piv
 from typing import Optional, List
-from drn_interactions.load import load_neurons_derived, load_derived_generic, load_eeg
-from drn_interactions.spikes import SpikesHandler
+from drn_interactions.io import load_neurons_derived, load_derived_generic, load_eeg
+from drn_interactions.transforms import SpikesHandler
 from copy import deepcopy
 from sklearn.metrics import r2_score
 from sklearn.feature_selection import SelectKBest, f_regression
-
-
-def shuffle_both(X, y):
-    """Shuffle the data"""
-    perm = np.random.permutation(X.shape[0])
-    return X[perm], y[perm]
-
-
-def shuffle_X(X, y):
-    """Shuffle X"""
-    perm = np.random.permutation(X.shape[0])
-    return X[perm], y
-
-
-def shuffle_y(X, y):
-    """Shuffle y"""
-    perm = np.random.permutation(X.shape[0])
-    return X, y[perm]
-
-
-def shuffle_Xcols(X, y):
-    """Shuffle Decorrelate X"""
-    X = np.apply_along_axis(np.random.permutation, 0, X)
-    return X, y
-
-
-def shuffle_neither(X, y):
-    """Shuffle neigher"""
-    return X, y
+from .shuffle import shuffle_X
 
 
 class StateDecoder:
@@ -338,7 +310,7 @@ class StateDecodePreprocessor:
         self.shuffle = shuffle
 
     def align_spikes(self, spikes, states):
-        spikes = get_state_piv(spikes, states)
+        spikes = get_state_piv(spikes, states)  # TODO change this
         states = spikes.pop("state")
         return spikes, states
 
@@ -372,7 +344,7 @@ class StateDecodePreprocessor:
         return spikes.copy(), states.copy()
 
 
-class EEGLoader:
+class EEGDecodeLoader:
     @property
     def eeg_states(self):
         return load_derived_generic("eeg_states.csv").rename(

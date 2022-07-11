@@ -13,10 +13,10 @@ statsmodels
 pymer4
 umap-learn
 networkx
-scikit-network
 binit
 spiketimes @ git+https://github.com/Ruairi-osul/spiketimes.git
 neurobox @ git+https://github.com/Ruairi-osul/neurobox.git
 mypy
 jupyter
 black
+neurodsp

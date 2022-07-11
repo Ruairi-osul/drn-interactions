@@ -1,8 +1,38 @@
-from drn_interactions.transforms import bin_spikes
-from drn_interactions.load import load_neurons_derived, load_spikes
+from .nbox_transforms import bin_spikes
+from drn_interactions.io import load_neurons_derived, load_spikes
 from spiketimes.df.surrogates import shuffled_isi_spiketrains_by
 import numpy as np
 import pandas as pd
+
+
+def concat_spikes_from_connsecutive_sessions(
+    df_current: pd.DataFrame, df_next: pd.DataFrame, df_neurons: pd.DataFrame
+) -> pd.DataFrame:
+    """Concattenate DataFrames of spikes containing data from two consectutive sessions
+
+    Args:
+        df_current ([type]): DataFrame for current session
+        df_next ([type]): DataFrame for next session
+        df_neurons ([type]): Neurons DataFrame (from load_neurons())
+
+    Returns:
+        pd.DataFrame: The two DataFrames concattenated together with appropriate adjustments to spiketimes
+    """
+    df_neurons = df_neurons[["neuron_id", "cluster", "session_name", "group"]]
+    df_current = df_current.merge(df_neurons)
+    max_spikes = (
+        df_current.groupby(["neuron_id", "session_name"], as_index=False)
+        .spiketimes.max()
+        .rename(columns={"spiketimes": "max_spike"})
+    )
+    df_next = (
+        df_next.merge(max_spikes)
+        .assign(spiketimes=lambda x: x.spiketimes.add(x.max_spike))
+        .loc[lambda x: x.spiketimes >= x.max_spike]
+        .drop("max_spike", axis=1)
+        .merge(df_neurons)
+    )
+    return pd.concat([df_current, df_next])
 
 
 class SpikesHandler:
