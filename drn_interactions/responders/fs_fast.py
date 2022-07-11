@@ -1,4 +1,3 @@
-from optparse import Option
 from typing import Any, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
@@ -7,10 +6,9 @@ from scipy.ndimage import gaussian_filter1d
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pingouin as pg
-from seaborn.axisgrid import FacetGrid
-from .shock_transforms import ShockUtils
-from .stats import mannwhitneyu_plusplus, p_adjust
-from .plots import PAL_GREY_BLACK
+from drn_interactions.transforms.shock_transforms import ShockUtils
+from drn_interactions.stats import mannwhitneyu_plusplus, p_adjust
+from drn_interactions.plots import PAL_GREY_BLACK
 
 
 class ShortTSResponders:
@@ -28,8 +26,7 @@ class ShortTSResponders:
 
 
 class ShortTsAnova(ShortTSResponders):
-    """Across all units, was the mean activity different inside and outside the window?
-    """
+    """Across all units, was the mean activity different inside and outside the window?"""
 
     def get_responders(
         self,
@@ -106,8 +103,7 @@ class ShortTsAnova(ShortTSResponders):
 
 
 class ShortTsAvg(ShortTSResponders):
-    """Define Foot Shock Response of Each Neuron Based on its Average Trace
-    """
+    """Define Foot Shock Response of Each Neuron Based on its Average Trace"""
 
     def get_responders(
         self, df_binned_aligned: pd.DataFrame, z: bool = False
@@ -326,7 +322,8 @@ class ShockPlotter:
             trains = trains[: max_trial + 1]
         _, ax = plt.subplots(figsize=(5, 2), nrows=1, sharex=True)
         ax.eventplot(
-            trains, color="black",
+            trains,
+            color="black",
         )
         ax.axvline(0, color="red")
         ax.set_yticks([])

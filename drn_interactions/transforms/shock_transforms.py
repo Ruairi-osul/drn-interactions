@@ -1,4 +1,4 @@
-from .transforms import align_to_data_by
+from drn_interactions.transforms.nbox_transforms import align_to_data_by
 from binit.bin import which_bin
 import numpy as np
 import warnings

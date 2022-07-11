@@ -4,7 +4,7 @@
 
 from pathlib import Path
 from typing import Dict, Optional
-from drn_interactions.export import (
+from .export import (
     calculate_distance,
     load_events,
     load_spiketimes,

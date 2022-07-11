@@ -1,5 +1,5 @@
 from .cross_correlations import ccf
-from .spikes import pop_population_train
+from drn_interactions.transforms.spikes import pop_population_train
 import pandas as pd
 import numpy as np
 

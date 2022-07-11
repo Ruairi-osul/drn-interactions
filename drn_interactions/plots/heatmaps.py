@@ -1,115 +1,3 @@
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.metrics.pairwise import pairwise_distances
-
-
-PAL_GREY_BLACK = sns.color_palette(["black", "silver"])
-
-
-def circular_hist(
-    x,
-    bins=16,
-    ax=None,
-    density=True,
-    offset=0,
-    gaps=True,
-    linewidth=1,
-    edgecolor="black",
-    fill=False,
-    **kwargs
-):
-    """
-    Produce a circular histogram of angles on ax.
-
-    From stackoverflow: https://stackoverflow.com/a/55067613/7993732
-
-    Parameters
-    ----------
-    ax : matplotlib.axes._subplots.PolarAxesSubplot
-        axis instance created with subplot_kw=dict(projection='polar').
-
-    x : array
-        Angles to plot, expected in units of radians.
-
-    bins : int, optional
-        Defines the number of equal-width bins in the range. The default is 16.
-
-    density : bool, optional
-        If True plot frequency proportional to area. If False plot frequency
-        proportional to radius. The default is True.
-
-    offset : float, optional
-        Sets the offset for the location of the 0 direction in units of
-        radians. The default is 0.
-
-    gaps : bool, optional
-        Whether to allow gaps between bins. When gaps = False the bins are
-        forced to partition the entire [-pi, pi] range. The default is True.
-
-    Returns
-    -------
-    n : array or list of arrays
-        The number of values in each bin.
-
-    bins : array
-        The edges of the bins.
-
-    patches : `.BarContainer` or list of a single `.Polygon`
-        Container of individual artists used to create the histogram
-        or list of such containers if there are multiple input datasets.
-    """
-    if ax is None:
-        _, ax = plt.subplots(subplot_kw=dict(projection="polar"))
-    # Wrap angles to [-pi, pi)
-    x = (x + np.pi) % (2 * np.pi) - np.pi
-
-    # Force bins to partition entire circle
-    if not gaps:
-        bins = np.linspace(-np.pi, np.pi, num=bins + 1)
-
-    # Bin data and record counts
-    n, bins = np.histogram(x, bins=bins)
-
-    # Compute width of each bin
-    widths = np.diff(bins)
-
-    # By default plot frequency proportional to area
-    if density:
-        # Area to assign each bin
-        area = n / x.size
-        # Calculate corresponding bin radius
-        radius = (area / np.pi) ** 0.5
-    # Otherwise plot frequency proportional to radius
-    else:
-        radius = n
-
-    # Plot data on ax
-    patches = ax.bar(
-        bins[:-1],
-        radius,
-        zorder=1,
-        align="edge",
-        width=widths,
-        edgecolor=edgecolor,
-        linewidth=linewidth,
-        fill=fill,
-        **kwargs,
-    )
-
-    # Set the direction of the zero angle
-    ax.set_theta_offset(offset)
-
-    # Remove ylabels for area plots (they are mostly obstructive)
-    if density:
-        ax.set_yticks([])
-
-    ax.set_xticklabels(
-        ["0", "", "0.5 $\cdot\pi$", "", "$\pi$", "", "-0.5 $\cdot\pi$", "", ""]
-    )
-    return ax
-
-
 from matplotlib.ticker import (
     Locator,
     Formatter,
@@ -121,6 +9,11 @@ from typing import Optional, Sequence, Tuple, Dict
 from matplotlib.colorbar import Colorbar
 import pandas as pd
 from scipy.stats import zscore
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.feature_extraction.text import TfidfTransformer
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import pairwise_distances
 
 
 def heatmap(
@@ -207,10 +100,6 @@ def similarity_map(
     return ax, cbar
 
 
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.feature_extraction.text import TfidfTransformer
-
-
 def long_raster(
     df_binned_piv: pd.DataFrame,
     tfidf: bool = False,
@@ -286,52 +175,4 @@ def state_indicator(
     ax.margins(x=margins)
     if despine:
         sns.despine(ax=ax, left=True)
-    return ax
-
-
-def plot_umap(
-    df_umap: pd.DataFrame,
-    y: Optional[str] = None,
-    ax: Optional[plt.Axes] = None,
-    dim_cols: Sequence[str] = ("d1", "d2"),
-    edgecolor="black",
-    alpha=0.2,
-    remove_legend: bool = True,
-    despine: bool = True,
-    formater_x: Optional[Formatter] = None,
-    formater_y: Optional[Formatter] = None,
-    locater_x: Locator = AutoLocator(),
-    locater_y: Locator = AutoLocator(),
-    tick_params: Optional[Dict] = None,
-    scatter_kwargs: Optional[Dict] = None,
-):
-    scatter_kwargs = {} if scatter_kwargs is None else scatter_kwargs
-    if ax is None:
-        _, ax = plt.subplots(figsize=(4, 4))
-
-    sns.scatterplot(
-        x=dim_cols[0],
-        y=dim_cols[1],
-        hue=y,
-        data=df_umap,
-        ax=ax,
-        edgecolor=edgecolor,
-        alpha=alpha,
-        **scatter_kwargs,
-    )
-    ax.set_xlabel("UMAP-1")
-    ax.set_ylabel("UMAP-2")
-    ax.xaxis.set_major_locator(locater_x)
-    if formater_x is not None:
-        ax.xaxis.set_major_formatter(formater_x)
-    ax.yaxis.set_major_locator(locater_y)
-    if formater_y is not None:
-        ax.yaxis.set_major_formatter(formater_y)
-    if tick_params is not None:
-        ax.tick_params(**tick_params)
-
-    if remove_legend:
-        ax.legend().remove()
-    if despine:
-        sns.despine(ax=ax)
     return ax
