@@ -87,12 +87,14 @@ def auc(arr, to_1=True):
     return sklearn.metrics.auc(x, arr)
 
 
-def mannwhitneyu_plusplus(x, y, names=("x", "y")):
+def mannwhitneyu_plusplus(x, y, names=("x", "y"), compare_f=None):
+    if compare_f is None:
+        compare_f = mannwhitneyu
     out = {}
     out[f"n_{names[0]}"] = len(x)
     out[f"n_{names[1]}"] = len(y)
     out[f"Mean_{names[0]}"] = np.mean(x)
     out[f"Mean_{names[1]}"] = np.mean(y)
     out["Diff"] = np.mean(y) - np.mean(x)
-    out["U"], out["p"] = mannwhitneyu(x, y)
+    out["U"], out["p"] = compare_f(x, y)
     return pd.Series(out)
