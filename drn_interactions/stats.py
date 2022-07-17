@@ -55,6 +55,10 @@ def auc(arr, to_1=True):
     return sklearn.metrics.auc(x, arr)
 
 
+def prop_of_total(arr):
+    return arr / np.sum(arr)
+
+
 def mannwhitneyu_plusplus(x, y, names=("x", "y"), compare_f=None):
     if compare_f is None:
         compare_f = mannwhitneyu
@@ -66,3 +70,12 @@ def mannwhitneyu_plusplus(x, y, names=("x", "y"), compare_f=None):
     out["Diff"] = np.mean(y) - np.mean(x)
     out["U"], out["p"] = compare_f(x, y)
     return pd.Series(out)
+
+
+def se_mean(arr):
+    return np.std(arr) / np.sqrt(len(arr))
+
+
+def se_prop(arr: np.ndarray):
+    p = arr.mean()
+    return np.sqrt((p * (1 - p)) / len(arr))

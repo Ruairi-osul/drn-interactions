@@ -31,7 +31,7 @@ def get_default_derived_data_dir(project_dirname="DRN Interactions") -> Path:
 
 class Config:
     data_dir = get_default_data_dir("DRN Interactions")
-    derived_data_dir = get_default_data_dir("DRN Interactions")
+    derived_data_dir = get_default_derived_data_dir("DRN Interactions")
     fig_dir = get_default_fig_dir("DRN Interactions")
 
     eeg_states = ("sw", "act")
@@ -59,6 +59,7 @@ class ExperimentInfo:
         "acute_cit",
         "acute_sal",
     )
+    neuron_type_order = ["sr", "sir", "ff"]
     cit_groups = ("acute_citalopram", "acute_cit")
     sal_groups = ("acute_saline", "acute_sal")
     foot_shock_sessions_all = (

@@ -1,4 +1,4 @@
-from .spikes import SpikesHandler, SpikesHandlerMulti
+from drn_interactions.transforms import SpikesHandler, SpikesHandlerMulti
 
 
 def shuffle_spikes(sh: SpikesHandler) -> SpikesHandler:

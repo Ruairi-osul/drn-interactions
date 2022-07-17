@@ -4,7 +4,7 @@ Functions for dealing with the data export from the database to .parquet files
 from ephys_queries.queries import select_discrete_data, select_stft, select_waveforms
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.schema import MetaData
-from drn_interactions.load import get_group_names
+from drn_interactions.config import ExperimentInfo
 from ephys_queries import select_neurons, select_spike_times
 from spiketimes.df.statistics import (
     mean_firing_rate_by,
@@ -21,7 +21,7 @@ from itertools import combinations
 def load_neurons(engine: Engine, metadata: MetaData) -> pd.DataFrame:
     """Loads neurons from the database
     """
-    group_names = get_group_names()
+    group_names = ExperimentInfo.group_names
     neurons = select_neurons(engine, metadata, group_names=group_names)
     return neurons
 
@@ -33,7 +33,7 @@ def load_eeg(
     t_before: int = 0,
     align_to_block=False,
 ) -> pd.DataFrame:
-    group_names = get_group_names()
+    group_names = ExperimentInfo.group_names
     try:
         neurons = select_stft(
             engine,
@@ -65,7 +65,7 @@ def load_spiketimes(
     Returns:
         pd.DataFrame: df of spiketimes
     """
-    group_names = get_group_names()
+    group_names = ExperimentInfo.group_names
     fs = 30000
     spiketimes = select_spike_times(
         engine,
@@ -80,10 +80,8 @@ def load_spiketimes(
     return spiketimes
 
 
-def load_waveforms(
-    engine: Engine, metadata: MetaData,
-) -> pd.DataFrame:
-    group_names = get_group_names()
+def load_waveforms(engine: Engine, metadata: MetaData,) -> pd.DataFrame:
+    group_names = ExperimentInfo.group_names
     return select_waveforms(engine, metadata, group_names=group_names)
 
 
@@ -91,7 +89,7 @@ def load_events(
     engine: Engine, metadata: MetaData, block_name: str, align_to_block: bool = False,
 ) -> pd.DataFrame:
     fs = 30000
-    group_names = get_group_names()
+    group_names = ExperimentInfo.group_names
     df_events = select_discrete_data(
         engine,
         metadata,

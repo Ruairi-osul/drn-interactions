@@ -1,6 +1,6 @@
 import numpy as np
 import seaborn as sns
-from drn_interactions.load import load_neurons_derived
+from drn_interactions.io import load_neurons_derived
 import matplotlib.pyplot as plt
 import pingouin as pg
 

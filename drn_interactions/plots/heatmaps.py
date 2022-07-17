@@ -32,6 +32,7 @@ def heatmap(
     cbar_tick_params: Optional[Dict] = None,
 ) -> Tuple[plt.Axes, Optional[Colorbar]]:
     heatmap_kwargs = {} if heatmap_kwargs is None else heatmap_kwargs
+
     if ax is None:
         _, ax = plt.subplots(figsize=(4, 4))
     X = df_binned_piv.values

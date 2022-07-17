@@ -1,5 +1,5 @@
 from .nbox_transforms import bin_spikes
-from drn_interactions.io import load_neurons_derived, load_spikes
+from drn_interactions.io import load_neurons, load_spikes
 from spiketimes.df.surrogates import shuffled_isi_spiketrains_by
 import numpy as np
 import pandas as pd
@@ -52,7 +52,7 @@ class SpikesHandler:
         self.t_stop = t_stop
         self.shuffle = shuffle
 
-        df_neurons = load_neurons_derived()
+        df_neurons = load_neurons()
         if session_names is None:
             self.neuron_ids = df_neurons.neuron_id.unique()
         elif session_names == "random":

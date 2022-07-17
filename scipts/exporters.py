@@ -2,12 +2,12 @@ from ephys_queries.queries import select_analog_signal_data
 import pandas as pd
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
-from drn_interactions.export import (
+from export import (
     load_neurons,
     load_spiketimes,
     load_waveforms,
 )
-from drn_interactions.load import get_group_names
+from drn_interactions.config import ExperimentInfo
 from dotenv import load_dotenv
 from ephys_queries import (
     select_recording_sessions,
@@ -16,11 +16,11 @@ from ephys_queries import (
     select_stft,
 )
 from spiketimes.df.statistics import mean_firing_rate_by, cv2_isi_by
-from waveform_utils.waveforms import (
-    waveform_peaks_by_neuron,
-    waveform_width_by_neuron,
-    peak_asymmetry_by_neuron,
-)
+# from waveform_utils.waveforms import (
+#     waveform_peaks_by_neuron,
+#     waveform_width_by_neuron,
+#     peak_asymmetry_by_neuron,
+# )
 import math
 from itertools import combinations
 
@@ -81,24 +81,24 @@ class WaveformsExporter(Exporter):
     def _get_raw_data(self):
         return load_waveforms(self.engine, self.metadata)
 
-    def _process_data(self, raw_data):
-        df_spikes = load_spiketimes(self.engine, self.metadata, block_name="pre")
-        waveforms = load_waveforms(self.engine, self.metadata)
-        peaks = waveform_peaks_by_neuron(
-            waveforms,
-            neuron_col="neuron_id",
-            index_col="waveform_index",
-            value_col="waveform_value",
-        ).dropna()
-        width = waveform_width_by_neuron(peaks, peak_names=["initiation", "ahp"])
-        peak_asym = peak_asymmetry_by_neuron(peaks, peak_names=["initiation", "ahp"])
-        mfr = mean_firing_rate_by(
-            df_spikes, spiketimes_col="spiketimes", spiketrain_col="neuron_id"
-        )
-        cv_isi = cv2_isi_by(
-            df_spikes, spiketimes_col="spiketimes", spiketrain_col="neuron_id"
-        )
-        return width.merge(peak_asym).merge(mfr).merge(cv_isi).merge(raw_data)
+    # def _process_data(self, raw_data):
+    # df_spikes = load_spiketimes(self.engine, self.metadata, block_name="pre")
+    # waveforms = load_waveforms(self.engine, self.metadata)
+    # peaks = waveform_peaks_by_neuron(
+    #     waveforms,
+    #     neuron_col="neuron_id",
+    #     index_col="waveform_index",
+    #     value_col="waveform_value",
+    # ).dropna()
+    # width = waveform_width_by_neuron(peaks, peak_names=["initiation", "ahp"])
+    # peak_asym = peak_asymmetry_by_neuron(peaks, peak_names=["initiation", "ahp"])
+    # mfr = mean_firing_rate_by(
+    #     df_spikes, spiketimes_col="spiketimes", spiketrain_col="neuron_id"
+    # )
+    # cv_isi = cv2_isi_by(
+    #     df_spikes, spiketimes_col="spiketimes", spiketrain_col="neuron_id"
+    # )
+    # return width.merge(peak_asym).merge(mfr).merge(cv_isi).merge(raw_data)
 
 
 class DistanceExporter(Exporter):
@@ -168,7 +168,7 @@ class DistanceExporter(Exporter):
 class RecordingsExporter(Exporter):
     def _get_raw_data(self):
         return select_recording_sessions(
-            self.engine, self.metadata, group_names=get_group_names()
+            self.engine, self.metadata, group_names=ExperimentInfo.group_names
         )
 
     def _process_data(self, raw_data):
@@ -190,7 +190,7 @@ class EventsExporter(BlockExporter):
         return select_discrete_data(
             self.engine,
             self.metadata,
-            group_names=get_group_names(),
+            group_names=ExperimentInfo.group_names,
             block_name=self.block,
             align_to_block=self.align_to_block,
         )
@@ -209,7 +209,7 @@ class SpikesExporter(BlockExporter):
             self.engine,
             self.metadata,
             block_name=self.block,
-            group_names=get_group_names(),
+            group_names=ExperimentInfo.group_names,
             t_before=self.t_before,
             align_to_block=self.align_to_block,
         )
@@ -228,7 +228,7 @@ class EEGExporter(BlockExporter):
             df = select_stft(
                 self.engine,
                 self.metadata,
-                group_names=get_group_names(),
+                group_names=ExperimentInfo.group_names,
                 signal_names=[EEGExporter.signal],
                 align_to_block=self.align_to_block,
                 t_before=self.t_before,
@@ -290,7 +290,7 @@ class LFPExporter(BlockExporter):
             df = select_stft(
                 self.engine,
                 self.metadata,
-                group_names=get_group_names(),
+                group_names=ExperimentInfo.group_names,
                 signal_names=[LFPExporter.signal],
                 align_to_block=self.align_to_block,
                 t_before=self.t_before,
@@ -343,6 +343,7 @@ class LFPExporter(BlockExporter):
             .assign(time=lambda x: x["time"] - 2)
         )
 
+
 # TODO add exporter for raw LFP and EEG
 
 
@@ -362,6 +363,7 @@ class LFPRawExporter(BlockExporter):
         except IndexError:
             df = pd.DataFrame()
         return df
+
 
 class EEGRawExporter(BlockExporter):
     signal = "eeg_occ"
