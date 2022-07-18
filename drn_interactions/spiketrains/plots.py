@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from drn_interactions.plots import heatmap
+from drn_interactions.plots import heatmap, wrap_all_text, wrap_ylabel, PAL_GREY_BLACK
 from sklearn.preprocessing import robust_scale
 from drn_interactions.config import Config
 from drn_interactions.io import load_waveforms
 from drn_interactions.transforms import SpikesHandler
 from drn_interactions.spiketrains.waveforms import WaveformPreprocessor
 import matplotlib as mpl
+import textwrap
 
 
 class NeuronTypesFigureLoader:
@@ -181,7 +182,9 @@ class NeuronTypesFigurePreprocessor:
         self.probe_waveform_time_col = probe_waveform_time_col
         self.created_probe_lab = created_probe_lab
         self.created_single_unit_lab = created_single_unit_lab
-        self.meta_cols = [c for c in new_col_names if c not in metrics]
+        self.meta_cols = [c for c in new_col_names if c not in metrics] + [
+            created_electrode_type_col
+        ]
         self.metrics = metrics
         self.id_col = id_col
         self.neuron_type_col = neuron_type_col
@@ -258,10 +261,18 @@ class NeuronTypesFigurePreprocessor:
                 ][self.id_col]
                 .unique()
                 .tolist()
-                # .astype(str)
             )
             out[neuron_type] = waveforms_pp.loc[:, neurons]
         return out
+
+    def pivot_props(self, df_props: pd.DataFrame) -> pd.DataFrame:
+        df_props = df_props.pivot_table(
+            index=[self.created_electrode_type_col, self.neuron_type_col, self.id_col],
+            columns=self.created_metric_col_name,
+            values=self.created_value_col_name,
+        )
+        df_props = df_props.sort_index(level=1, ascending=False)
+        return df_props
 
     def preprocess_spikes(
         self, probe_spikes: pd.DataFrame, df_probe_preprocessed: pd.DataFrame
@@ -399,7 +410,7 @@ class NeuronTypesFigureGridMaker:
         self,
         fig: mpl.figure.Figure,
         wspace: float = 0.01,
-        width_ratios=(0.9, 0.3),
+        width_ratios=(1, 0.2),
         **kwargs
     ):
         fig_raster, fig_waveforms = fig.subfigures(
@@ -438,10 +449,9 @@ class NeuronTypesPlotter:
         grid_spec_kwargs = grid_spec_kwargs or {}
         grid_spec_kwargs["hspace"] = grid_spec_kwargs.get("hspace", 0.1)
         grid_spec_kwargs["top"] = grid_spec_kwargs.get("top", 0.9)
-        grid_spec_kwargs["bottom"] = grid_spec_kwargs.get("bottom", 0)
-        grid_spec_kwargs["left"] = grid_spec_kwargs.get("left", 0.2)
+        grid_spec_kwargs["bottom"] = grid_spec_kwargs.get("bottom", 0.1)
+        grid_spec_kwargs["left"] = grid_spec_kwargs.get("left", 0.1)
         grid_spec_kwargs["right"] = grid_spec_kwargs.get("right", 0.9)
-        print(grid_spec_kwargs)
 
         plot_kwargs = plot_kwargs or {}
         plot_kwargs["color"] = plot_kwargs.get("color", "black")
@@ -454,7 +464,7 @@ class NeuronTypesPlotter:
             nrows=len(neuron_type_order),
             ncols=1,
             height_ratios=height_ratios,
-            **grid_spec_kwargs
+            **grid_spec_kwargs,
         )
         axes = {}
         for neuron_type in neuron_type_order:
@@ -479,12 +489,12 @@ class NeuronTypesPlotter:
     ) -> Dict[str, mpl.axes.Axes]:
         fig = fig or plt.figure()
         grid_spec_kwargs = grid_spec_kwargs or {}
-        grid_spec_kwargs["top"] = grid_spec_kwargs.get("top", 0.7)
+        grid_spec_kwargs["top"] = grid_spec_kwargs.get("top", 0.75)
         grid_spec_kwargs["bottom"] = grid_spec_kwargs.get("bottom", 0.1)
         grid_spec_kwargs["left"] = grid_spec_kwargs.get("left", 0)
-        grid_spec_kwargs["right"] = grid_spec_kwargs.get("right", 0.7)
-        grid_spec_kwargs["wspace"] = grid_spec_kwargs.get("wspace", 0.7)
-        grid_spec_kwargs["hspace"] = grid_spec_kwargs.get("hspace", 0.7)
+        grid_spec_kwargs["right"] = grid_spec_kwargs.get("right", 0.6)
+        grid_spec_kwargs["wspace"] = grid_spec_kwargs.get("wspace", 0)
+        grid_spec_kwargs["hspace"] = grid_spec_kwargs.get("hspace", 0.8)
 
         plot_kwargs = plot_kwargs or {}
         plot_kwargs["color"] = plot_kwargs.get("color", "black")
@@ -496,7 +506,7 @@ class NeuronTypesPlotter:
             nrows=len(neuron_type_order),
             ncols=1,
             height_ratios=height_ratios,
-            **grid_spec_kwargs
+            **grid_spec_kwargs,
         )
         axes = {}
         for neuron_type in neuron_type_order:
@@ -509,16 +519,255 @@ class NeuronTypesPlotter:
                 axes[neuron_type].axis("off")
         return axes
 
-    def plot_heatmaps(self, df_props: pd.DataFrame):
-        # silicon probe
+    def plot_heatmaps(
+        self,
+        df_props_probe: pd.DataFrame,
+        df_props_single_unit: pd.DataFrame,
+        fig: Optional[mpl.figure.Figure] = None,
+        grid_spec_kwargs: Optional[Dict[str, Any]] = None,
+        heatmap_kwargs: Optional[Dict[str, Any]] = None,
+        tick_params: Optional[Dict[str, Any]] = None,
+        cbar_kwargs: Optional[Dict[str, Any]] = None,
+        textwrap_width: Optional[int] = None,
+    ):
+        # make axes grid
+        fig = fig or plt.figure()
+        grid_spec_kwargs = grid_spec_kwargs or {}
+        grid_spec_kwargs["top"] = grid_spec_kwargs.get("top", 0.6)
+        grid_spec_kwargs["bottom"] = grid_spec_kwargs.get("bottom", 0.3)
+        grid_spec_kwargs["right"] = grid_spec_kwargs.get("right", 0.91)
+        grid_spec_kwargs["left"] = grid_spec_kwargs.get("left", 0.05)
+        grid_spec_kwargs["wspace"] = grid_spec_kwargs.get("wspace", 0.25)
 
-        ## pivot dropna and scale
+        grid_spec_kwargs["width_ratios"] = grid_spec_kwargs.get(
+            "width_ratios", [1, 1, 0.08]
+        )
+        grid_spec_kwargs["height_ratios"] = grid_spec_kwargs.get(
+            "height_ratios", [0.5, 1]
+        )
+        axes = fig.subplot_mosaic(
+            [
+                [
+                    "h1",
+                    "h2",
+                    "c",
+                ],
+                [
+                    "h1",
+                    "h2",
+                    ".",
+                ],
+            ],
+            gridspec_kw=grid_spec_kwargs,
+        )
 
-        ## heatmap
+        # plot defaults
+        heatmap_kwargs = heatmap_kwargs or {}
+        heatmap_kwargs["cmap"] = heatmap_kwargs.get("cmap", "coolwarm")
+        heatmap_kwargs["vmin"] = heatmap_kwargs.get("vmin", -1)
+        heatmap_kwargs["vmax"] = heatmap_kwargs.get("vmax", 1)
+        heatmap_kwargs["center"] = heatmap_kwargs.get("center", 0)
+        heatmap_kwargs["xticklabels"] = heatmap_kwargs.get(
+            "xticklabels", df_props_probe.columns
+        )
 
-        # glass pipette
+        tick_params = tick_params or {}
+        tick_params["width"] = heatmap_kwargs.get("width", 0)
+        tick_params["rotation"] = heatmap_kwargs.get("rotation", 45)
+        tick_params["labelsize"] = heatmap_kwargs.get("labelsize", "small")
 
-        ## pivot dropna and scale
+        # ticks
+        locater_x = plt.IndexLocator(1, 0.5)
+        locater_y = plt.NullLocator()
 
-        ## heatmap
-        ...
+        # cbar
+        cbar_kwargs = cbar_kwargs or {}
+        heatmap_kwargs["cbar_ax"] = axes["c"]
+        heatmap_kwargs["cbar_kws"] = cbar_kwargs
+        cbar_tick_params = tick_params.copy()
+        cbar_title_kwargs = {
+            "label": "Z-Score",
+            "labelsize": tick_params["labelsize"],
+        }
+
+        heatmap(
+            df_binned_piv=df_props_probe,
+            ax=axes["h1"],
+            locater_x=locater_x,
+            locater_y=locater_y,
+            formater_x=None,
+            heatmap_kwargs=heatmap_kwargs,
+            tick_params=tick_params,
+            cbar_tick_params=cbar_tick_params,
+            cbar_title_kwargs=cbar_title_kwargs,
+        )
+        heatmap(
+            df_binned_piv=df_props_single_unit,
+            ax=axes["h2"],
+            locater_x=locater_x,
+            formater_x=None,
+            locater_y=locater_y,
+            heatmap_kwargs=heatmap_kwargs,
+            tick_params=tick_params,
+            cbar_tick_params=cbar_tick_params,
+            cbar_title_kwargs=cbar_title_kwargs,
+        )
+        axes["h1"].set_title("Silicon\nProbe")
+        axes["h2"].set_title("Glass\nPipette")
+
+        if textwrap_width is not None:
+            for ax in (axes["h1"], axes["h2"]):
+                wrap_all_text(ax, width=textwrap_width)
+                ax.tick_params(**tick_params)
+
+        return axes
+
+    def plot_bars(
+        self,
+        df_props: pd.DataFrame,
+        electrode_types_col: str = "Electrode Type",
+        metrics_col: str = "Metric",
+        value_col: str = "Value",
+        neuron_type_col: str = "Neuron Type",
+        fig: Optional[mpl.figure.Figure] = None,
+        grid_spec_kwargs: Optional[Dict[str, Any]] = None,
+        barplot_kwargs: Optional[Dict[str, Any]] = None,
+        despine: bool = True,
+        tick_params: Optional[Dict[str, Any]] = None,
+        textwrap_width: Optional[int] = None,
+    ):
+        electrode_types = (
+            df_props[electrode_types_col].value_counts().index.values.tolist()
+        )
+        metrics = df_props[metrics_col].value_counts().index.values.tolist()
+        neuron_types = df_props[neuron_type_col].value_counts().index.values.tolist()
+        # make axes grid
+        fig = fig or plt.figure()
+        grid_spec_kwargs = grid_spec_kwargs or {}
+        grid_spec_kwargs["top"] = grid_spec_kwargs.get("top", 0.8)
+        grid_spec_kwargs["bottom"] = grid_spec_kwargs.get("bottom", 0.1)
+        grid_spec_kwargs["right"] = grid_spec_kwargs.get("right", 0.8)
+        grid_spec_kwargs["left"] = grid_spec_kwargs.get("left", 0.25)
+        grid_spec_kwargs["wspace"] = grid_spec_kwargs.get("wspace", 0.2)
+        grid_spec_kwargs["wspace"] = grid_spec_kwargs.get("hspace", 0.4)
+
+        axes = fig.subplots(
+            nrows=len(metrics),
+            ncols=len(electrode_types),
+            sharey="row",
+            sharex=True,
+            gridspec_kw=grid_spec_kwargs,
+        )
+
+        # plot defaults
+        barplot_kwargs = barplot_kwargs or {}
+        barplot_kwargs["color"] = barplot_kwargs.get("color", "grey")
+        barplot_kwargs["edgecolor"] = barplot_kwargs.get("edgecolor", "black")
+        barplot_kwargs["linewidth"] = barplot_kwargs.get("linewidth", 0.8)
+        barplot_kwargs["errwidth"] = barplot_kwargs.get("errwidth", 1.2)
+        barplot_kwargs["capsize"] = barplot_kwargs.get("capsize", 0.15)
+        barplot_kwargs["errcolor"] = barplot_kwargs.get("errcolor", "black")
+        barplot_kwargs["alpha"] = barplot_kwargs.get("alpha", 1)
+        barplot_kwargs["order"] = barplot_kwargs.get("order", neuron_types)
+
+        # tick defaults
+        tick_params = tick_params or {}
+
+        for col_idx, electrode_type in enumerate(electrode_types):
+            for row_idx, metric in enumerate(metrics):
+                ax = axes[row_idx, col_idx]
+                df_ = df_props.loc[
+                    lambda x: (x[electrode_types_col] == electrode_type)
+                    & (x[metrics_col] == metric)
+                ]
+                sns.barplot(
+                    data=df_,
+                    x=neuron_type_col,
+                    y=value_col,
+                    ax=ax,
+                    **barplot_kwargs,
+                )
+                if col_idx == 0:
+                    ax.set_ylabel(metric)
+                else:
+                    ax.set_ylabel("")
+                if row_idx == 0:
+                    ax.set_title(electrode_type)
+                else:
+                    ax.set_title("")
+                ax.set_xlabel("")
+                if despine:
+                    sns.despine(ax=ax)
+
+                if textwrap_width is not None:
+                    wrap_ylabel(ax, width=textwrap_width)
+
+                ax.tick_params(**tick_params)
+        fig.align_ylabels()
+        return axes
+
+    def plot_pct(
+        self,
+        df_props: pd.DataFrame,
+        fig: Optional[mpl.figure.Figure] = None,
+        grid_spec_kwargs: Optional[Dict[str, Any]] = None,
+        neuron_type_col: str = "Neuron Type",
+        electrode_types_col: str = "Electrode Type",
+        ylabel: str = "% Total",
+        palette: Optional[List[str]] = None,
+        barplot_kwargs: Optional[Dict[str, Any]] = None,
+        legend_fontsize: Optional[str] = None,
+        despine: bool = True,
+    ):
+        palette = palette or PAL_GREY_BLACK
+        electrode_types = (
+            df_props[electrode_types_col].value_counts().index.values.tolist()
+        )
+        neuron_types = df_props[neuron_type_col].value_counts().index.values.tolist()
+        fig = fig or plt.figure()
+        grid_spec_kwargs = grid_spec_kwargs or {}
+        grid_spec_kwargs["top"] = grid_spec_kwargs.get("top", 0.6)
+        grid_spec_kwargs["bottom"] = grid_spec_kwargs.get("bottom", 0.3)
+        grid_spec_kwargs["right"] = grid_spec_kwargs.get("right", 0.9)
+        grid_spec_kwargs["left"] = grid_spec_kwargs.get("left", 0.1)
+        ax = fig.subplots(gridspec_kw=grid_spec_kwargs)
+
+        # plot defaults
+        barplot_kwargs = barplot_kwargs or {}
+        barplot_kwargs["edgecolor"] = barplot_kwargs.get("edgecolor", "black")
+        barplot_kwargs["linewidth"] = barplot_kwargs.get("linewidth", 0.8)
+        barplot_kwargs["alpha"] = barplot_kwargs.get("errwidth", 1)
+        barplot_kwargs["order"] = barplot_kwargs.get("order", neuron_types)
+        barplot_kwargs["hue_order"] = barplot_kwargs.get("hue_order", electrode_types)
+        barplot_kwargs["palette"] = barplot_kwargs.get("palette", palette)
+
+        ax = (
+            df_props[neuron_type_col]
+            .groupby(df_props[electrode_types_col])
+            .value_counts(normalize=True)
+            .rename(ylabel)
+            .multiply(100)
+            .reset_index()
+            .pipe(
+                (sns.barplot, "data"),
+                x=neuron_type_col,
+                y=ylabel,
+                hue="Electrode Type",
+                ax=ax,
+                **barplot_kwargs,
+            )
+        )
+        if legend_fontsize:
+            plt.setp(ax.get_legend().get_texts(), fontsize=legend_fontsize)
+        ax.set_xlabel("")
+        sns.move_legend(
+            ax,
+            "lower center",
+            bbox_to_anchor=(0.5, 1),
+            ncol=1,
+            title=None,
+            frameon=False,
+        )
+        if despine:
+            sns.despine(ax=ax)
+        return ax

@@ -41,7 +41,7 @@ class WaveformPreprocessor:
 
     @staticmethod
     def scale_to_pre(
-        vals: np.ndarray,
+        vals: pd.Series,
         baseline_start_idx: int = 0,
         baseline_end_idx: int = 60,
         transformer_fac=Callable[[Any], TransformerMixin],
@@ -63,11 +63,16 @@ class WaveformPreprocessor:
     ) -> pd.DataFrame:
         df_piv = self.pivot(df_waveforms, neuron_col, time_col, value_col)
         if self.medfilter_size is not None:
-            df_piv = df_piv.transform(self._med_filter, axis=1,)
+            df_piv = df_piv.transform(
+                self._med_filter,
+                axis=1,
+            )
 
         if self.gaussian_sigma is not None:
             df_piv = df_piv.transform(
-                gaussian_filter1d, sigma=self.gaussian_sigma, axis=1,
+                gaussian_filter1d,
+                sigma=self.gaussian_sigma,
+                axis=1,
             )
 
         if self.scale_to_baseline:
@@ -105,7 +110,7 @@ class WaveformOutliers:
             n_jobs=self.n_jobs,
         )
 
-    def detect_outliers(self, df_waveforms_piv: pd.DataFrame) -> np.ndarray:
+    def detect_outliers(self, df_waveforms_piv: pd.DataFrame) -> None:
         X = df_waveforms_piv.values
         self.preds = self.mod.fit_predict(X)
 
@@ -290,7 +295,10 @@ class WaveformPeaks:
     def _find_peak_min(
         self, waveform: np.ndarray, tolerance: float = 0.3, prominence: float = 0.15
     ) -> int:
-        peak_min_idx, _ = find_peaks(waveform * -1, prominence=prominence,)
+        peak_min_idx, _ = find_peaks(
+            waveform * -1,
+            prominence=prominence,
+        )
         is_min = self._peak_is_min(waveform, peak_min_idx, tolerance=tolerance)
         min_peak = peak_min_idx[is_min]
         try:
@@ -307,7 +315,10 @@ class WaveformPeaks:
     def _find_peak_basepre(
         self, waveform: np.ndarray, peak_min: int, prominence: float = 0.05
     ) -> int:
-        peak_max_idx, _ = find_peaks(waveform, prominence=prominence,)
+        peak_max_idx, _ = find_peaks(
+            waveform,
+            prominence=prominence,
+        )
         try:
             pre_min_peaks = peak_max_idx[peak_max_idx < peak_min]
             last_peak_before_min = pre_min_peaks[-1]
@@ -318,7 +329,10 @@ class WaveformPeaks:
     def _find_peak_basepost(
         self, waveform: np.ndarray, peak_min: int, prominence: float = 0.05
     ) -> int:
-        peak_max_idx, _ = find_peaks(waveform, prominence=prominence,)
+        peak_max_idx, _ = find_peaks(
+            waveform,
+            prominence=prominence,
+        )
         try:
             pre_min_peaks = peak_max_idx[peak_max_idx > peak_min]
             first_peak_after_min = pre_min_peaks[0]

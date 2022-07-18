@@ -37,8 +37,10 @@ def heatmap(
         _, ax = plt.subplots(figsize=(4, 4))
     X = df_binned_piv.values
     sns.heatmap(X, ax=ax, **heatmap_kwargs)
-    ax.xaxis.set_major_locator(locater_x)
-    ax.xaxis.set_major_formatter(formater_x)
+    if locater_x is not NullLocator:
+        ax.xaxis.set_major_locator(locater_x)
+    if formater_x is not None:
+        ax.xaxis.set_major_formatter(formater_x)
     ax.yaxis.set_major_locator(locater_y)
     if formater_y is not None:
         ax.yaxis.set_major_formatter(formater_y)
