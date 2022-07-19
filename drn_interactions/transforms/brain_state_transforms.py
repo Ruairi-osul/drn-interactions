@@ -173,4 +173,3 @@ class BrainStateUtils:
         )
         df = self._get_state_from_aligned(spikes, eeg_states)
         return df
-
