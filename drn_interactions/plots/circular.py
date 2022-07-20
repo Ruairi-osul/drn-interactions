@@ -100,6 +100,16 @@ def circular_hist(
         ax.set_yticks([])
 
     ax.set_xticklabels(
-        ["0", "", "0.5 $\cdot\pi$", "", "$\pi$", "", "-0.5 $\cdot\pi$", "", ""]
+        [
+            "0\nPeak",
+            "",
+            "0.5 $\cdot\pi$",
+            "",
+            "$\pi$\nTroff",
+            "",
+            "-0.5 $\cdot\pi$",
+            "",
+            "",
+        ]
     )
     return ax

@@ -52,6 +52,7 @@ class StateHandler:
             df = df[df[self.time_column] <= self.t_stop]
         if self.session_names is not None:
             df = df[df[self.session_column].isin(self.session_names)]
+        df = df[df[self.quality_column].isin(self.quality_to_include)]
         return df
 
 

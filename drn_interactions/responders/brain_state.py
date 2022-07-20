@@ -4,6 +4,7 @@ from typing import Any, Optional, Dict, Tuple
 import numpy as np
 from drn_interactions.stats import p_adjust, mannwhitneyu_plusplus
 from pingouin import circ_mean, circ_rayleigh
+from scipy.stats import circvar
 
 
 class SpikeRateResonders:
@@ -149,7 +150,10 @@ class PhaseLockResponders:
     def _circstats(x: np.ndarray, fs=None) -> pd.Series:
         mean = circ_mean(x)
         z, p = circ_rayleigh(x, d=fs)
-        return pd.Series({"mean_angle": mean, "stat": z, "p": p}).astype(float)
+        var = circvar(x, low=-np.pi, high=np.pi)
+        return pd.Series({"mean_angle": mean, "var": var, "stat": z, "p": p}).astype(
+            float
+        )
 
     def prefered_angles(self, df, phase_col: str = "phase"):
         df_res = df.groupby(self.df_neuron_col, as_index=False)[phase_col].apply(
