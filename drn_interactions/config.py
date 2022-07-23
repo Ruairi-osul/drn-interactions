@@ -24,6 +24,10 @@ def get_default_fig_dir(project_dirname="DRN Interactions") -> Path:
     basepath = _get_base_dir(project_dirname)
     return basepath / "figs"
 
+def get_default_table_dir(project_dirname="DRN Interactions") -> Path:
+    basepath = _get_base_dir(project_dirname)
+    return basepath / "tables"
+
 
 def get_default_derived_data_dir(project_dirname="DRN Interactions") -> Path:
     return get_default_data_dir(project_dirname=project_dirname) / "derived"
@@ -33,6 +37,7 @@ class Config:
     data_dir = get_default_data_dir("DRN Interactions")
     derived_data_dir = get_default_derived_data_dir("DRN Interactions")
     fig_dir = get_default_fig_dir("DRN Interactions")
+    table_dir = get_default_table_dir("DRN Interactions")
 
     eeg_states = ("sw", "act")
     cluster_col = "wf_3"

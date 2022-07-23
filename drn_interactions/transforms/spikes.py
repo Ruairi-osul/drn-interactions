@@ -52,18 +52,18 @@ class SpikesHandler:
         self.t_stop = t_stop
         self.shuffle = shuffle
 
-        df_neurons = load_neurons()
+        self.df_neurons = load_neurons()[["session_name", "neuron_id"]]
         if session_names is None:
-            self.neuron_ids = df_neurons.neuron_id.unique()
+            self.neuron_ids = self.df_neurons.neuron_id.unique()
         elif session_names == "random":
             self.session_names = (
-                np.random.choice(df_neurons["session_name"].unique()),
+                np.random.choice(self.df_neurons["session_name"].unique()),
             )
-            self.neuron_ids = df_neurons.loc[
+            self.neuron_ids = self.df_neurons.loc[
                 lambda x: x.session_name.isin(self.session_names)
             ].neuron_id.unique()
         else:
-            self.neuron_ids = df_neurons.loc[
+            self.neuron_ids = self.df_neurons.loc[
                 lambda x: x.session_name.isin(self.session_names)
             ].neuron_id.unique()
 
@@ -88,6 +88,7 @@ class SpikesHandler:
                 spikes = shuffled_isi_spiketrains_by(
                     spikes, spiketimes_col="spiketimes", by_col="neuron_id", n=1
                 )
+            spikes = spikes.merge(self.df_neurons)
             self._spikes = spikes
         return self._spikes
 
