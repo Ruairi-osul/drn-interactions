@@ -1,4 +1,4 @@
-timepoint_s,cluster,quality,session_name
+timepoint_s,state,quality,session_name
 0.0,act,poor,ESHOCK_01
 2.0,act,poor,ESHOCK_01
 4.0,act,poor,ESHOCK_01
