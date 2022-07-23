@@ -12,3 +12,4 @@ figs
 *.svg
 .gitignore
 data/derived/old
+.DS*
