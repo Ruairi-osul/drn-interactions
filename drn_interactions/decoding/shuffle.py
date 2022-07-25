@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def shuffle_both(X, y):
     """Shuffle the data"""
     perm = np.random.permutation(X.shape[0])
@@ -21,6 +22,12 @@ def shuffle_y(X, y):
 def shuffle_Xcols(X, y):
     """Shuffle Decorrelate X"""
     X = np.apply_along_axis(np.random.permutation, 0, X)
+    return X, y
+
+
+def roll_X(X, y):
+    """Roll X"""
+    X = np.roll(X, np.random.randint(1, len(X)), axis=0)
     return X, y
 
 

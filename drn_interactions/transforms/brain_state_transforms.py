@@ -9,23 +9,6 @@ from neurobox.long_transforms import get_closest_event
 from .spikes import SpikesHandler
 
 
-def get_state_piv(
-    spikes, eeg, state_col="state", index_name="bin", eeg_time_col="timepoint_s"
-):
-    spikes = spikes.copy()
-    return (
-        spikes.reset_index()
-        .assign(
-            eeg_time=lambda x: which_bin(
-                x[index_name].values,
-                eeg[eeg_time_col].values,
-                time_before=0,
-                time_after=2,
-            )
-        )
-        .merge(eeg, left_on="eeg_time", right_on=eeg_time_col)
-        .set_index(index_name)[list(spikes.columns) + [state_col]]
-    )
 
 
 def get_state_long(spikes, eeg, index_name="bin", eeg_time_col="timepoint_s"):
