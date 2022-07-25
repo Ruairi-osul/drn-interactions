@@ -24,6 +24,7 @@ def get_default_fig_dir(project_dirname="DRN Interactions") -> Path:
     basepath = _get_base_dir(project_dirname)
     return basepath / "figs"
 
+
 def get_default_table_dir(project_dirname="DRN Interactions") -> Path:
     basepath = _get_base_dir(project_dirname)
     return basepath / "tables"
@@ -92,23 +93,21 @@ class ExperimentInfo:
         "hamilton_32",
     )
     eeg_sessions = (
-        "ESHOCK_01",
-        "ESHOCK_02",
         "ESHOCK_03_LOC1",
         "ESHOCK_04_LOC1",
         "ESHOCK_06_LOC1",
         "ESHOCK_07_LOC1",
         "ESHOCK_08_LOC1",
         "ESHOCK_09_LOC1",
-        "acute_11",
-        "acute_12",
-        "acute_14",
-        "acute_15",
-        "acute_16",
+        "hamilton_10",
         "hamilton_03",
         "hamilton_04",
         "hamilton_09",
-        "hamilton_10",
+        "acute_15",
+        "acute_16",
+        "acute_14",
+        "acute_12",
+        "acute_11",
     )
     chal1_sessions = (
         "hamilton_10",
