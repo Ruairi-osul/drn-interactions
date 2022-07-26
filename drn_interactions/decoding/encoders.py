@@ -24,7 +24,6 @@ class StateEncoder:
         cv,
         shuffler=None,
         scoring=r2_score,
-        state_colname="state",
         neuron_types_path: Optional[Path] = None,
         neuron_id_col: str = "neuron_id",
         neuron_type_col: str = "neuron_type",
@@ -34,7 +33,6 @@ class StateEncoder:
         self.cv = cv
         self.shuffler = shuffler if shuffler is not None else shuffle_X
         self.scoring = scoring
-        self.state_colname = state_colname
         self.verbose = verbose
         self.neuron_types_path = (
             neuron_types_path or Config.derived_data_dir / "neuron_types.csv"
