@@ -69,8 +69,6 @@ class ExperimentInfo:
     cit_groups = ("acute_citalopram", "acute_cit")
     sal_groups = ("acute_saline", "acute_sal")
     foot_shock_sessions_all = (
-        "hamilton_10",
-        "hamilton_03",
         "hamilton_04",
         "hamilton_09",
         "hamilton_31",
@@ -81,8 +79,6 @@ class ExperimentInfo:
         "hamilton_32",
     )
     foot_shock_sessions_10min = (
-        "hamilton_10",
-        "hamilton_03",
         "hamilton_04",
         "hamilton_09",
         "hamilton_31",
