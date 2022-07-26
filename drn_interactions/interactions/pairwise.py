@@ -48,7 +48,7 @@ class PairwiseMetric(abc.ABC):
         not_duplicate_comb = pd.DataFrame(
             np.sort(df[["neuron_1", "neuron_2"]].values, 1)
         ).duplicated()
-        df = df[not_duplicate_comb].copy()
+        return df[not_duplicate_comb].copy()
 
     @staticmethod
     def _rectify(df_corr):
