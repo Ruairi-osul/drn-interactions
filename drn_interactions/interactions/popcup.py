@@ -5,7 +5,7 @@ import numpy as np
 
 
 class PopulationCoupling:
-    def __init__(self, nlags, method="ccf", min_spikes=0):
+    def __init__(self, nlags=50, method="ccf", min_spikes=0):
         self.nlags = nlags
         self.method = method
         self.min_spikes = min_spikes
@@ -17,7 +17,7 @@ class PopulationCoupling:
             df_piv (pd.DataFrame): Index is time bin, columns are neurons, values are activity
 
         Returns:
-            pd.DataFrame: A 
+            pd.DataFrame: A
         """
         time_interval = np.diff(df_piv.index.values)[0]
         frames = []
@@ -65,10 +65,13 @@ class PopulationCoupling:
         to_exclude = sums[sums <= thresh].index.values
         return df[[c for c in df.columns if c not in to_exclude]]
 
+    def __call__(self, df_piv, method="zerolag"):
+        self.fit(df_piv)
+        return self.get_couplings(method)
+
 
 def popcup_zerolag(df, nlags=100, name="popcup"):
     out = PopulationCoupling(nlags=nlags).get_couplings(df)
     return out.loc[lambda x: x.lag == 0].rename(columns={"cc": name})[
         ["neuron_id", name]
     ]
-

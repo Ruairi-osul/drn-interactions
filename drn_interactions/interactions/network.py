@@ -101,7 +101,7 @@ def small_word_propensity(g: nx.Graph, weight="weight", _inverse_distance: bool 
     elif delta_L < 0:
         delta_L = 0
 
-    phi = 1 - np.sqrt(((delta_C ** 2) + (delta_L ** 2)) / 2)
+    phi = 1 - np.sqrt(((delta_C**2) + (delta_L**2)) / 2)
     delta = ((4 * np.arctan2(delta_C, delta_L)) / np.pi) - 1
 
     return phi, delta, delta_C, delta_L
