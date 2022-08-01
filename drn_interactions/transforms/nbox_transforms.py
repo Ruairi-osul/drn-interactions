@@ -59,6 +59,7 @@ def bin_spikes_interval(
     spiketimes_col: str = "spiketimes",
     neuron_col: str = "neuron_id",
     t_start: Optional[float] = None,
+    t_stop: Optional[float] = None,
 ) -> pd.DataFrame:
     """Bins a df containing spikes at a regular binwidth
 
@@ -78,6 +79,7 @@ def bin_spikes_interval(
         spiketrain_col=neuron_col,
         fs=1 / bin_width,
         t_start=t_start,
+        t_stop=t_stop,
     )
 
 
@@ -244,7 +246,9 @@ def exlude_using_spike_rate_long(
 
 
 def exclude_baseline(
-    df: pd.DataFrame, time_col: str, baseline_before: float = 0,
+    df: pd.DataFrame,
+    time_col: str,
+    baseline_before: float = 0,
 ) -> pd.DataFrame:
     """Exclude data from baseline
 
@@ -336,7 +340,10 @@ def gaussian_smooth(df: pd.DataFrame, sigma: float) -> pd.DataFrame:
 
 
 def sort_by_activity_in_range(
-    df: pd.DataFrame, t_start: float, t_stop: float, agg_func: Callable,
+    df: pd.DataFrame,
+    t_start: float,
+    t_stop: float,
+    agg_func: Callable,
 ) -> pd.DataFrame:
     """Sort columns of a DataFrame in wide format by values in a given time range
 

@@ -1,5 +1,6 @@
 from scipy.stats import zscore
 from sklearn.preprocessing import minmax_scale
+from drn_interactions.transforms.brain_state_spikes import align_spikes_to_states_wide
 
 
 class InteractionsPreprocessor:

@@ -1,47 +1,68 @@
-from typing import Sequence
+from typing import Callable, Optional, Sequence
 import numpy as np
 import pingouin as pg
-from .utils import corr_df_to_tidy, zero_diag_df
+from .utils import corr_df_to_tidy, zero_diag_df, shuffle_df_corr
 import abc
 import pandas as pd
 
 
 class PairwiseMetric(abc.ABC):
     value_col = "value"
+    corr_calculator: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None
 
     def __init__(
         self,
-        zero_diag: bool = True,
+        remove_self_interactions: bool = True,
         remove_duplicate_combs: bool = True,
         rectify: bool = False,
         shuffle: bool = False,
+        neuron_col: str = "neuron_id",
+        add_x: Optional[float] = None,
     ) -> None:
-        self.zero_diag = zero_diag
+        self.remove_self_interactions = remove_self_interactions
         self.remove_duplicate_combs = remove_duplicate_combs
         self.rectify = rectify
         self.shuffle = shuffle
+        self.neuron_col = neuron_col
+        self.add_x = add_x
 
-    @abc.abstractmethod
-    def __call__(self, df):
-        ...
-
-    def get_adjacency_matrix(self):
-        return self.A_
-
-    def get_corr_df(
-        self,
-    ):
+    def _make_edge_df(self, df_corr):
+        df_edge = (
+            df_corr.copy()
+            .reset_index()
+            .rename(columns={self.neuron_col: "neuron_1"})
+            .melt(id_vars="neuron_1", var_name="neuron_2", value_name=self.value_col)
+        )
         if self.remove_duplicate_combs:
-            return self._remove_duplicate_combs(self.df_corr_.copy())
+            df_edge = self._remove_duplicate_combs(df_edge)
+        return df_edge.copy()
+
+    def get_adjacency_df(self):
         return self.df_corr_
 
-    def shuffle_interactions(self):
-        self.df_corr_[self.value_col] = np.random.permutation(
-            self.df_corr_[self.value_col].values
-        )
-        self.A_ = self.df_corr_.pivot(
-            index="neuron_1", columns="neuron_2", values=self.value_col
-        )
+    def get_edge_df(self):
+        return self._make_edge_df(self.df_corr_)
+
+    def _shuffle_interactions(self):
+        self.df_corr_ = shuffle_df_corr(self.df_corr_)
+
+    def _remove_self_interactions(self):
+        self.df_corr_ = zero_diag_df(self.df_corr_)
+
+    def fit(self, df):
+        self.df_corr_ = self.corr_calculator(df)
+        if self.shuffle:
+            self._shuffle_interactions()
+        if self.add_x:
+            self._add_x()
+        if self.remove_self_interactions:
+            self._remove_self_interactions()
+        if self.rectify:
+            self._rectify()
+        return self
+
+    def _add_x(self):
+        self.df_corr_ = self.df_corr_ + self.add_x
 
     @staticmethod
     def _remove_duplicate_combs(df):
@@ -50,78 +71,27 @@ class PairwiseMetric(abc.ABC):
         ).duplicated()
         return df[not_duplicate_comb].copy()
 
-    @staticmethod
-    def _rectify(df_corr):
-        vals = df_corr.values
+    def _rectify(self):
+        vals = self.df_corr_.values
         vals[vals < 0] = 0
-        return pd.DataFrame(vals, index=df_corr.index, columns=df_corr.columns)
+        self.df_corr_ = pd.DataFrame(
+            vals, index=self.df_corr_.index, columns=self.df_corr_.columns
+        )
+
+    def __call__(self, df_piv, y=None):
+        self.fit(df_piv, y)
+        return self.get_adjacency_df()
 
 
 class PairwiseCorr(PairwiseMetric):
     value_col = "corr"
 
-    def fit(self, df_piv, y=None):
-        self.X_ = df_piv
-        self.features_in_ = df_piv.columns.values
-
-        self.A_ = self.X_.corr()
-
-        self.df_corr_ = corr_df_to_tidy(
-            self.A_,
-            value_name=PairwiseCorr.value_col,
-        )
-        if self.shuffle:
-            self.shuffle_interactions()
-        if self.zero_diag:
-            self.A_ = zero_diag_df(self.A_)
-
-        if self.rectify:
-            self.A_ = self._rectify(self.A_)
-
-        self.df_corr_ = corr_df_to_tidy(
-            self.A_,
-            value_name=PairwiseCorr.value_col,
-        )
-
-        return self
-
-    def __call__(self, df_piv, y=None):
-        self.fit(df_piv, y)
-        return self.get_corr_df()
+    def corr_calculator(self, df):
+        return df.corr()
 
 
 class PairwisePartialCorr(PairwiseMetric):
     value_col = "pcorr"
 
-    def fit(self, df_piv, y=None):
-        self.X_ = df_piv
-        self.features_in_ = df_piv.columns.values
-
-        self.A_ = self.X_.pcorr()
-        self.df_corr_ = corr_df_to_tidy(
-            self.A_,
-            value_name=PairwisePartialCorr.value_col,
-        )
-        if self.shuffle:
-            self.shuffle_interactions()
-        if self.zero_diag:
-            self.A_ = zero_diag_df(self.A_)
-
-        if self.rectify:
-            self.A_ = self._rectify(self.A_)
-
-        self.df_corr_ = corr_df_to_tidy(
-            self.A_,
-            value_name=PairwiseCorr.value_col,
-        )
-        return self
-
-    def __call__(self, df_piv, y=None):
-        self.fit(df_piv, y)
-        return self.get_corr_df()
-
-
-# class PairwiseRunner:
-#     def __init__(self, corr_calculators: Sequence[PairwiseMetric]):
-#         self.corr_calculators = corr_calculators
-#         ...
+    def corr_calculator(self, df):
+        return df.pcorr()
