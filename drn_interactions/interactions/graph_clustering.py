@@ -60,10 +60,11 @@ class SpectralCluster:
         return self.mod.labels_
 
 
-def df_to_graph(df) -> nx.Graph:
-    nodes = df.columns.values
+def df_to_graph(df, rename_nodes: bool = True) -> nx.Graph:
     G = nx.from_numpy_array(df.values)
-    G = nx.relabel_nodes(G, lambda x: nodes[x])
+    if rename_nodes:
+        nodes = df.columns.values
+        G = nx.relabel_nodes(G, lambda x: nodes[x])
     return G
 
 
