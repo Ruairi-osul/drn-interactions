@@ -81,8 +81,6 @@ def modularity(df, labels: np.ndarray) -> float:
 
 
 class ClusterEvaluation:
-    # TODO setup labels -> partition
-
     @staticmethod
     def _make_graph(df):
         return df_to_graph(df)
