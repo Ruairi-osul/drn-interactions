@@ -16,6 +16,7 @@ networkx
 binit
 spiketimes @ git+https://github.com/Ruairi-osul/spiketimes.git
 neurobox @ git+https://github.com/Ruairi-osul/neurobox.git
+seqnmf @ git+https://github.com/Ruairi-osul/seqnmf.git
 mypy
 jupyter
 black
