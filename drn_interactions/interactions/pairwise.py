@@ -17,6 +17,7 @@ class PairwiseMetric(abc.ABC):
         rectify: bool = False,
         shuffle: bool = False,
         neuron_col: str = "neuron_id",
+        comb_col_name: str = "comb",
         add_x: Optional[float] = None,
     ) -> None:
         self.remove_self_interactions = remove_self_interactions
@@ -25,6 +26,7 @@ class PairwiseMetric(abc.ABC):
         self.shuffle = shuffle
         self.neuron_col = neuron_col
         self.add_x = add_x
+        self.comb_col_name = comb_col_name
 
     def _make_edge_df(self, df_corr):
         df_edge = (
@@ -35,6 +37,10 @@ class PairwiseMetric(abc.ABC):
         )
         if self.remove_duplicate_combs:
             df_edge = self._remove_duplicate_combs(df_edge)
+        df_edge[self.comb_col_name] = df_edge.apply(
+            lambda x: sorted(list({x["neuron_1"], x["neuron_2"]})), axis=1
+        )
+        df_edge[self.comb_col_name] = df_edge[self.comb_col_name].astype(str)
         return df_edge.copy()
 
     def get_adjacency_df(self):
@@ -49,7 +55,7 @@ class PairwiseMetric(abc.ABC):
     def _remove_self_interactions(self):
         self.df_corr_ = zero_diag_df(self.df_corr_)
 
-    def fit(self, df):
+    def fit(self, df, y=None):
         self.df_corr_ = self.corr_calculator(df)
         if self.shuffle:
             self._shuffle_interactions()
