@@ -337,12 +337,17 @@ class ClusterRunner:
             partition_stats["modularity_p"].values[0] < 0.05
         )
         df_out["sig"] = df_out["sig"] if mod_sig else False
+        df_out["ensemble_orig"] = df_out["ensemble"]
         df_out["ensemble"] = np.where(
             df_out["sig"] == True,
-            df_out["ensemble"],
+            df_out["ensemble_orig"],
             -1,
         )
-        return df_out
+        ensemble_stats = ensemble_stats.rename(
+            columns=dict(ensemble="ensemble_orig")
+        ).merge(df_out[["ensemble", "ensemble_orig"]].drop_duplicates(), how="left")
+
+        return df_out, ensemble_stats
 
     def run_single(self, null=False):
         df_affinity = self.create_affinity(null=null)
@@ -366,7 +371,7 @@ class ClusterRunner:
         ensemble_stats = self.compare_ensembles_to_nulls(
             ensemble_quality_obs, ensemble_null
         )
-        ensembles = self.tidy_ensembles(
+        ensembles, ensemble_stats = self.tidy_ensembles(
             df_affinity, ensembles_obs, partition_stats, ensemble_stats
         )
         return (df_affinity, ensembles, partition_stats, ensemble_stats)
