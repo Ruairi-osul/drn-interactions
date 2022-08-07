@@ -89,7 +89,8 @@ class ClusterEvaluation:
     def _partition_from_labels(df, labels):
         nodes = df.columns.values
         partition = [nodes[labels == i] for i in set(labels)]
-        return partition
+        names = list(set(labels))
+        return names, partition
 
     @staticmethod
     def _ms(G):
@@ -102,7 +103,7 @@ class ClusterEvaluation:
 
     def modularity(self, df, labels) -> float:
         G = self._make_graph(df)
-        partition = self._partition_from_labels(df, labels)
+        _, partition = self._partition_from_labels(df, labels)
         modularity = nx.algorithms.community.modularity(G, partition, weight="weight")
         return modularity
 
@@ -164,8 +165,8 @@ class ClusterEvaluation:
         return np.mean(weights)
 
     def _apply_each_com(self, df, labels, f):
-        partition = self._partition_from_labels(df, labels)
-        return [f(df, com) for com in partition]
+        names, partition = self._partition_from_labels(df, labels)
+        return {name: f(df, com) for name, com in zip(names, partition)}
 
     def evaluate_partition(self, df, labels):
         modularity = self.modularity(df, labels)
@@ -180,9 +181,9 @@ class ClusterEvaluation:
         df,
         labels,
     ):
-        partition = self._partition_from_labels(df, labels)
+        names, partition = self._partition_from_labels(df, labels)
         results = []
-        for i, com in enumerate(partition):
+        for name, com in zip(names, partition):
             average_degree = self.average_degree(df, com)
             size = len(com)
             average_weight = self.average_weight(df, com)
@@ -193,7 +194,7 @@ class ClusterEvaluation:
             edge_expantion = self.edge_expantion(df, com)
             results.append(
                 (
-                    i,
+                    name,
                     size,
                     average_degree,
                     average_weight,
