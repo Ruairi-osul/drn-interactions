@@ -67,10 +67,10 @@ def clustering_onnela(g: nx.Graph, weight="weight"):
 def small_word_propensity(g: nx.Graph, weight="weight", _inverse_distance: bool = True):
     def _add_distance(g):
         for n1, n2, d in g.edges(data=True):
-            g[n1][n2]["distance"] = 1 / d[weight]
+            g[n1][n2]["_distance"] = 1 / d[weight]
         return g
 
-    distance = "distance" if _inverse_distance else "weight"
+    distance = "_distance" if _inverse_distance else "weight"
 
     random = create_random(g.copy(), weight=weight)
     lattice = create_lattice(g.copy(), weight=weight)

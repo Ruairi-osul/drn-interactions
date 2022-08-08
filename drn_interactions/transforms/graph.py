@@ -16,7 +16,7 @@ class GraphTransformer:
         distance_col: str = "distance",
         distance_source_col: str = "neuron1",
         distance_target_col: str = "neuron2",
-        ensemble_id_col: str = "ensemble",
+        ensemble_id_col: str = "ensemble_id",
         ensemble_outlier_val: Any = -1,
         neuron_types: Optional[pd.DataFrame] = None,
         df_distance: Optional[pd.DataFrame] = None,
