@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 from .network import small_word_propensity
+from networkx.exception import NetworkXError
 
 
 class GraphAttributes:
@@ -20,7 +21,7 @@ class GraphAttributes:
 
     def _add_distance(self, g: nx.Graph) -> nx.Graph:
         for n1, n2, d in g.edges(data=True):
-            g[n1][n2]["distance"] = 1 / d[self.weight_attr]
+            g[n1][n2]["_distance"] = 1 / d[self.weight_attr]
         return g
 
     def average_degree(self, G: nx.Graph) -> np.number:
@@ -36,14 +37,20 @@ class GraphAttributes:
 
     def small_world_coefficient(self, G: nx.Graph) -> np.number:
         """Weighted small world coefficient"""
-        swp = small_word_propensity(G, weight=self.weight_attr)
-        return swp[0]
+        try:
+            swp = small_word_propensity(G, weight=self.weight_attr)
+            return swp[0]
+        except NetworkXError:
+            return np.nan
 
     def average_path_length(self, G: nx.Graph) -> np.number:
         """Average path length of a graph"""
-        if self.inverse_distance:
-            G = self._add_distance(G)
-        return nx.average_shortest_path_length(G, weight="distance")
+        try:
+            if self.inverse_distance:
+                G = self._add_distance(G)
+            return nx.average_shortest_path_length(G, weight="_distance")
+        except NetworkXError:
+            return np.nan
 
     def density(self, G: nx.Graph) -> np.number:
         """Weighted density of a graph"""
