@@ -4,7 +4,7 @@ from copy import deepcopy
 
 
 class InteractionsRunner:
-    def __init__(self, loader, preprocessor, pcup, corr, pcorr):
+    def __init__(self, loader, preprocessor, pcup=None, corr=None, pcorr=None):
         self.loader = loader
         self.preprocessor = preprocessor
         self.pcup = pcup
