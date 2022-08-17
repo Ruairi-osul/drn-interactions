@@ -27,8 +27,11 @@ class GraphAttributes:
     def average_degree(self, G: nx.Graph) -> np.number:
         """Average degree of a graph"""
         degree = G.degree(weight=self.weight_attr)
-        degree = np.mean(list(dict(degree).values()))
-        return degree
+        degree = pd.Series(dict(degree))
+        if self.normalized:
+            degree = degree / len(G.nodes)
+        average_degree = np.mean(degree)
+        return average_degree
 
     def average_clustering_coefficient(self, G: nx.Graph) -> np.number:
         """Average clustering coefficient of a graph"""
@@ -64,6 +67,7 @@ class GraphAttributes:
             avg_clust=self.average_clustering_coefficient(G),
             swp=self.small_world_coefficient(G),
             avg_path_len=self.average_path_length(G),
+            density=self.density(G),
         )
         return pd.DataFrame.from_dict(out, orient="index").T
 
