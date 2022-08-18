@@ -12,3 +12,8 @@ figs
 .gitignore
 data/derived/old
 .DS*
+data/*
+!data/derived
+data/derived/old/*
+data/derived/chal_binned.csv
+data/derived/way_binned.csv
