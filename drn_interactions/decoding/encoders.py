@@ -1,20 +1,14 @@
 from pathlib import Path
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import cross_val_score
 from sklearn.base import clone
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from typing import Callable, Dict
-from typing import Optional, List
-from drn_interactions.io import load_neurons_derived, load_derived_generic, load_eeg
-from drn_interactions.transforms import SpikesHandler
+from typing import Dict, Optional
 from copy import deepcopy
 from sklearn.metrics import r2_score
 from sklearn.feature_selection import SelectKBest, f_regression
-from .shuffle import shuffle_X
-from drn_interactions.config import Config, ExperimentInfo
-from drn_interactions.transforms.brain_state_spikes import align_spikes_to_states_wide
+from .shuffle import shuffle_X_df
+from drn_interactions.config import Config
 
 
 class StateEncoder:
@@ -31,7 +25,7 @@ class StateEncoder:
     ):
         self.estimator = estimator
         self.cv = cv
-        self.shuffler = shuffler if shuffler is not None else shuffle_X
+        self.shuffler = shuffler if shuffler is not None else shuffle_X_df
         self.scoring = scoring
         self.verbose = verbose
         self.neuron_types_path = (
@@ -42,43 +36,41 @@ class StateEncoder:
         self.neuron_type_col = neuron_type_col
         self.neuron_types = self.df_neuron_types[self.neuron_type_col].dropna().unique()
 
-    def run_pop(self, spikes, states):
+    def run_pop(self, spikes, states, shuffle=False):
         neurons = spikes.columns
         df_all = spikes
         out = {}
         for neuron in tqdm(neurons, disable=not self.verbose):
             y = df_all[neuron].values
             X = df_all.drop(neuron, axis=1)
-            out[neuron] = self._run_single(X, y, do_clone=True)
+            out[neuron] = self._run_single(X, y, do_clone=True, shuffle=shuffle)
         self.pop_scores_ = out
         return self
 
-    def run_state(self, spikes, states):
+    def run_state(self, spikes, states, shuffle=False):
         neurons = spikes.columns
         out = {}
         states = states.to_frame()
         for neuron in tqdm(neurons, disable=not self.verbose):
             y = spikes[neuron].values
             X = states
-            out[neuron] = self._run_single(X, y, do_clone=True)
+            out[neuron] = self._run_single(X, y, do_clone=True, shuffle=shuffle)
         self.state_scores_ = out
         return self
 
-    def run_combined(self, spikes: pd.DataFrame, states: pd.Series):
+    def run_combined(self, spikes: pd.DataFrame, states: pd.Series, shuffle=False):
         neurons = spikes.columns
         df_all = spikes.join(states).copy()
         out = {}
         for neuron in tqdm(neurons, disable=not self.verbose):
             y = spikes[neuron].values
             X = df_all.drop(neuron, axis=1)
-            out[neuron] = self._run_single(X, y, do_clone=True)
+            out[neuron] = self._run_single(X, y, do_clone=True, shuffle=shuffle)
         self.combined_scores_ = out
         return self
 
     def run_dropout(
-        self,
-        spikes: pd.DataFrame,
-        states: pd.Series,
+        self, spikes: pd.DataFrame, states: pd.Series, shuffle: bool = False
     ):
         neurons = spikes.columns
         df_all = spikes
@@ -100,7 +92,7 @@ class StateEncoder:
                     X = preds.drop(neuron, axis=1)
                 else:
                     X = preds
-                cv_scores = self._run_single(X, y, do_clone=True)
+                cv_scores = self._run_single(X, y, do_clone=True, shuffle=shuffle)
                 inner_dict[neuron] = np.mean(cv_scores["test_score"])
             outer_dict[neuron_type] = inner_dict
         self.dropout_scores_ = outer_dict
@@ -111,6 +103,7 @@ class StateEncoder:
         states: pd.Series,
         min_features: int = 1,
         max_features: Optional[int] = None,
+        shuffle: bool = False,
     ):
         max_features = (spikes.shape[1] - 1) if max_features is None else max_features
 
@@ -130,7 +123,7 @@ class StateEncoder:
                 X = spikes.drop(neuron, axis=1)
                 try:
                     cv_scores = self._run_single(
-                        X, y, do_clone=True, estimator=estimator_k
+                        X, y, do_clone=True, estimator=estimator_k, shuffle=shuffle
                     )
                     inner_dict[k_features] = np.mean(cv_scores["test_score"])
                 except ValueError:
@@ -192,7 +185,7 @@ class StateEncoder:
     ):
         return self.dropout_scores_
 
-    def _run_single(self, X, y, do_clone=False, estimator=None):
+    def _run_single(self, X, y, do_clone=False, estimator=None, shuffle=False):
         if estimator is None:
             estimator = self.estimator if not do_clone else clone(self.estimator)
         cv = self.cv if not do_clone else deepcopy(self.cv)
@@ -200,6 +193,8 @@ class StateEncoder:
             cv.random_state = np.random.randint(0, 100000)
         estimators = []
         test_scores = []
+        if shuffle:
+            X, y = self.shuffler(X, y)
         for train_index, test_index in cv.split(X):
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
             y_train, y_test = y[train_index], y[test_index]
