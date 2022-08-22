@@ -171,8 +171,8 @@ class EncodeRunner:
             self._states = states
         return self._states
 
-    def run_pop(self):
-        self.encoder.run_pop(self.spikes, self.states)
+    def run_pop(self, shuffle=False):
+        self.encoder.run_pop(self.spikes, self.states, shuffle=shuffle)
         pop = self.encoder.get_pop_scores()
         df_pop = (
             pd.DataFrame(pop)
@@ -183,8 +183,8 @@ class EncodeRunner:
         )
         return df_pop
 
-    def run_state(self):
-        self.encoder.run_state(self.spikes, self.states)
+    def run_state(self, shuffle=False):
+        self.encoder.run_state(self.spikes, self.states, shuffle=shuffle)
         state = self.encoder.get_state_scores()
         df_state = (
             pd.DataFrame(state)
@@ -195,8 +195,8 @@ class EncodeRunner:
         )
         return df_state
 
-    def run_comb(self):
-        self.encoder.run_combined(self.spikes, self.states)
+    def run_comb(self, shuffle=False):
+        self.encoder.run_combined(self.spikes, self.states, shuffle=shuffle)
         comb = self.encoder.get_combined_scores()
         df_comb = (
             pd.DataFrame(comb)
@@ -207,12 +207,13 @@ class EncodeRunner:
         )
         return df_comb
 
-    def run_limit(self, min_features, max_features):
+    def run_limit(self, min_features, max_features, shuffle=False):
         self.encoder.run_limit(
             self.spikes,
             self.states,
             min_features=min_features,
             max_features=max_features,
+            shuffle=shuffle,
         )
         limit = self.encoder.get_limit_scores()
         df_limit = pd.DataFrame(limit)
@@ -222,8 +223,8 @@ class EncodeRunner:
         )
         return df_limit
 
-    def run_dropout(self):
-        self.encoder.run_dropout(self.spikes, self.states)
+    def run_dropout(self, shuffle=False):
+        self.encoder.run_dropout(self.spikes, self.states, shuffle=shuffle)
         drop = self.encoder.get_dropout_scores()
         df_drop = pd.DataFrame(drop)
         df_drop = df_drop.reset_index().rename({"index": "neuron_id"}, axis=1)
@@ -234,44 +235,44 @@ class EncodeRunner:
         )
         return df_drop
 
-    def run_multiple_pop(self, sessions):
+    def run_multiple_pop(self, sessions, shuffle=False):
         frames = []
         for session in sessions:
             self._spikes = None
             self._states = None
             self.loader.set_session(session)
-            frame = self.run_pop().assign(session_name=session)
+            frame = self.run_pop(shuffle=shuffle).assign(session_name=session)
             frames.append(frame)
         return pd.concat(frames).reset_index(drop=True)
 
-    def run_multiple_limit(self, sessions, min_features, max_features):
+    def run_multiple_limit(self, sessions, min_features, max_features, shuffle=False):
         frames = []
         for session in sessions:
             self._spikes = None
             self._states = None
             self.loader.set_session(session)
             frame = self.run_limit(
-                min_features=min_features, max_features=max_features
+                min_features=min_features, max_features=max_features, shuffle=shuffle
             ).assign(session_name=session)
             frames.append(frame)
         return pd.concat(frames).reset_index(drop=True)
 
-    def run_multiple_dropout(self, sessions):
+    def run_multiple_dropout(self, sessions, shuffle=False):
         frames = []
         for session in sessions:
             self._spikes = None
             self._states = None
             self.loader.set_session(session)
-            frame = self.run_dropout().assign(session_name=session)
-            frames.append(frame)
+            frame = self.run_dropout(shuffle=shuffle).assign(session_name=session)
+            frames.append(frame, )
         return pd.concat(frames).reset_index(drop=True)
 
-    def run_multiple_state(self, sessions):
+    def run_multiple_state(self, sessions, shuffle=False):
         frames = []
         for session in sessions:
             self._spikes = None
             self._states = None
             self.loader.set_session(session)
-            frame = self.run_state().assign(session_name=session)
+            frame = self.run_state(shuffle=shuffle).assign(session_name=session)
             frames.append(frame)
         return pd.concat(frames).reset_index(drop=True)

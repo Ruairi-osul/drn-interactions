@@ -1,6 +1,12 @@
 import numpy as np
 
 
+def shuffle_X_df(X, y):
+    """Shuffle X as a dataframe"""
+    X = X.copy().sample(frac=1).reset_index(drop=True)
+    return X, y
+
+
 def shuffle_both(X, y):
     """Shuffle the data"""
     perm = np.random.permutation(X.shape[0])
