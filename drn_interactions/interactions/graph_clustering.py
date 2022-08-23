@@ -95,8 +95,8 @@ class ClusterEvaluation:
 
     @staticmethod
     def _ms(G):
-        degree_dist = list(dict(G.degree(weight="weight")).values())
-        return np.sum(degree_dist)
+        weights = [data["weight"] for u, v, data in G.edges(data=True)]
+        return np.sum(weights)
 
     @staticmethod
     def _ns(G):
@@ -174,6 +174,12 @@ class ClusterEvaluation:
         weights = [data["weight"] for u, v, data in G_com.edges(data=True)]
         return np.mean(weights)
 
+    def average_weight_out(self, df, com) -> float:
+        G = self._make_graph(df)
+        edges = nx.edge_boundary(G, com, data="weight", default=1)
+        weights = [weight for u, v, weight in edges]
+        return np.mean(weights)
+
     def _apply_each_com(self, df, labels, f):
         names, partition = self._partition_from_labels(df, labels)
         return {name: f(df, com) for name, com in zip(names, partition)}
@@ -193,10 +199,13 @@ class ClusterEvaluation:
     ):
         names, partition = self._partition_from_labels(df, labels)
         results = []
+        mod = self.modularity(df, labels)
         for name, com in zip(names, partition):
             average_degree = self.average_degree(df, com)
             size = len(com)
             average_weight = self.average_weight(df, com)
+            average_weight_out = self.average_weight_out(df, com)
+            volume = self.volume(df, com)
             normalized_cut_size = self.normalized_cut_size(df, com)
             internal_density = self.internal_density(df, com)
             cut_size = self.cut_size(df, com)
@@ -208,11 +217,14 @@ class ClusterEvaluation:
                     size,
                     average_degree,
                     average_weight,
+                    average_weight_out,
+                    volume,
                     normalized_cut_size,
                     internal_density,
                     cut_size,
                     conductance,
                     edge_expantion,
+                    mod,
                 )
             )
         return pd.DataFrame(
@@ -222,11 +234,14 @@ class ClusterEvaluation:
                 "size",
                 "average_degree",
                 "average_weight",
+                "average_weight_out",
+                "volume",
                 "normalized_cut_size",
                 "internal_density",
                 "cut_size",
                 "conductance",
                 "edge_expantion",
+                "modularity",
             ],
         )
 
