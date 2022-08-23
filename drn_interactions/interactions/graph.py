@@ -13,15 +13,29 @@ class GraphAttributes:
         self,
         normalized=True,
         weight_attr="weight",
-        inverse_distance=True,
+        distance_from_edge="bounded",
     ):
         self.normalized = normalized
         self.weight_attr = weight_attr
-        self.inverse_distance = inverse_distance
+
+        if distance_from_edge == "bounded":
+            self.inverse_distance = True
+            self.distance_from_edge = self._add_distance_bounded
+        elif distance_from_edge == "inverse":
+            self.inverse_distance = True
+            self.distance_from_edge = self._add_distance
+        else:
+            self.inverse_distance = False
+            self.distance_from_edge = lambda x: x
 
     def _add_distance(self, g: nx.Graph) -> nx.Graph:
         for n1, n2, d in g.edges(data=True):
             g[n1][n2]["_distance"] = 1 / d[self.weight_attr]
+        return g
+
+    def _add_distance_bounded(self, g: nx.Graph) -> nx.Graph:
+        for n1, n2, d in g.edges(data=True):
+            g[n1][n2]["_distance"] = 1 - d[self.weight_attr]
         return g
 
     def average_degree(self, G: nx.Graph) -> np.number:
@@ -50,14 +64,14 @@ class GraphAttributes:
         """Average path length of a graph"""
         try:
             if self.inverse_distance:
-                G = self._add_distance(G)
+                G = self.distance_from_edge(G)
             return nx.average_shortest_path_length(G, weight="_distance")
         except NetworkXError:
             return np.nan
 
     def density(self, G: nx.Graph) -> np.number:
         """Weighted density of a graph"""
-        summed_weight = np.sum(list(dict(G.degree(weight=self.weight_attr)).values()))
+        summed_weight = np.sum([data["weight"] for u, v, data in G.edges(data=True)])
         number_of_nodes = len(G.nodes)
         return summed_weight / number_of_nodes
 
