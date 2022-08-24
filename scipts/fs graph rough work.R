@@ -20,7 +20,7 @@ theme_set(
       legend.key.size = unit(0.5, 'cm'),
       legend.position = "right",
       axis.line=element_line(),
-      axis.title.y = element_text(size=9, angle=90, margin = margin(t = 0, r = 0, b = 0, l = 5)),
+      axis.title.y = element_text(size=9, angle=90, margin = margin(t = 0, r = 5, b = 0, l = 5)),
       panel.border = element_blank(),
       strip.background = element_blank(),
       plot.title = element_text(size=9, face="plain", margin = margin(t = 0, r = 0, b = 5, l = 0))
@@ -133,6 +133,12 @@ contrasts_edge_nt <- pairs(emms_edge_nt, by="block")
 
 ###### Plots
 
+#######
+ylab_node <- "Neuron\nNormalized\nDegree"
+ylab_edge <- "Neuron Pair\nInteraction\nWeight"
+
+
+
 p_node_nt <- degree_emms_nt %>%
   as_tibble() %>%
   ggplot(aes(x=block, y=emmean, fill=block, ymin=emmean - SE, ymax=emmean + SE)) + 
@@ -152,8 +158,9 @@ p_node_nt <- degree_emms_nt %>%
   guides(fill="none") +
   labs(y=ylab_node) +
   theme(
-    axis.text.x = element_text(size=10, angle=45)
+    axis.text.x = element_text(size=9, angle=45)
   )
+
 p_node_nt
 
 p_node_responsivity <- degree_emms_response %>%
@@ -162,7 +169,7 @@ p_node_responsivity <- degree_emms_response %>%
   geom_bar(
     stat="identity",  
     color="black", 
-    width=0.7, 
+    width=0.4, 
     position=position_dodge(preserve = "single", width=0.8)
   ) +
   geom_errorbar(
@@ -196,7 +203,7 @@ p_edge_nt <-emms_edge_nt %>%
   scale_fill_manual(values=c(Shock="black", Pre="grey")) +
   facet_grid(cols=vars(nt_comb)) +
   guides(fill="none") +
-  labs(y=ylab) +
+  labs(y=ylab_edge) +
   theme(
     axis.text.x = element_text(angle=45),
     panel.border = element_blank(),
@@ -213,38 +220,31 @@ out <- p_node_nt + p_node_responsivity + p_edge_nt  + plot_layout(design = layou
 out
 
 
-#######
-ylab_node <- "Neuron\nNormalized\nDegree"
-ylab_edge <- "Neuron Pair\nInteraction\nWeight"
-
 
 
 ########
-df_ensemble_stats <- read_csv("data/derived/ensembles/fs - descripted.csv") %>%
+df_ensemble_stats <- read_csv("data/derived/ensembles/fs - stats - true.csv") %>%
 select(
   ensemble_id, 
   block,
   size,
   internal_density,
-  normalized_cut_size,
-  cut_size,
-  conductance,
-  neuron_type_entropy, 
-  slow_response_entropy,) %>%
+  average_weight,
+  response_fs_entropy,
+  neuron_type_entropy
+  ) %>%
   preprocess_fs_block() %>%
   pivot_longer(-c(block, ensemble_id), names_to="metric") %>%
   mutate(
     metric=factor(
       metric, 
       levels=c(
-        "size",
-        "conductance", 
+        "average_weight",
         "neuron_type_entropy",
-        "slow_response_entropy"
+        "response_fs_entropy"
       ),
       labels=c(
-        "Ensemble\nSize",
-        "Ensemble\nConductance",
+        "Mean\nEnsemble Interaction\nStrength",
         "Ensemble\nNeuron Type\nEntropy",
         "Ensemble\nFoot Shock\nResponse Entropy"
       )
@@ -254,8 +254,8 @@ select(
   group_by(block, metric) %>%
   summarise(mean=mean(value, na.rm = TRUE), se=sd(value)/sqrt(n()))
 
-p_ensembles_size <- df_ensemble_stats %>%
-  filter(metric== "Ensemble\nSize") %>%
+p_ensemble_weight <- df_ensemble_stats %>%
+  filter(metric== "Mean\nEnsemble Interaction\nStrength") %>%
   ggplot(aes(x=block, fill=block, y=mean, ymin=mean-se, ymax=mean+se)) +
   geom_bar(
     stat="identity",  
@@ -270,25 +270,10 @@ p_ensembles_size <- df_ensemble_stats %>%
   ) +
   scale_fill_manual(values=c(Shock="black", Pre="grey")) +
   guides(fill="none") + labs(y="") +
-  ggtitle("Ensemble\nSize")
-
-p_conductance <- df_ensemble_stats %>%
-  filter(metric== "Ensemble\nConductance") %>%
-  ggplot(aes(x=block, fill=block, y=mean, ymin=mean-se, ymax=mean+se)) +
-  geom_bar(
-    stat="identity",  
-    color="black", 
-    width=0.52, 
-    position=position_dodge(preserve = "single", width=0.8)
-  ) +
-  geom_errorbar(
-    width=0.28,
-    color='#5c5c5c',
-    position=position_dodge(preserve = "single", width=0.8)
-  ) +
-  ggtitle("Ensemble\nConductance") +
-  scale_fill_manual(values=c(Shock="black", Pre="grey")) +
-  guides(fill="none") + labs(y="")
+  ggtitle("Mean\nEnsemble\nInteraction\nWeight") +
+  theme(
+    axis.text.x = element_text(angle=45)
+  )
 
 p_nt_entropy <- df_ensemble_stats %>%
   filter(metric== "Ensemble\nNeuron Type\nEntropy") %>%
@@ -306,7 +291,10 @@ p_nt_entropy <- df_ensemble_stats %>%
   ) +
   ggtitle("Ensemble\nNeuron Type\nEntropy") +
   scale_fill_manual(values=c(Shock="black", Pre="grey")) +
-  guides(fill="none") + labs(y="")
+  guides(fill="none") + labs(y="") +
+  theme(
+    axis.text.x = element_text(angle=45)
+  )
 
 
 p_response_entropy <- df_ensemble_stats %>%
@@ -325,10 +313,25 @@ p_response_entropy <- df_ensemble_stats %>%
   ) +
   ggtitle("Ensemble\nResponse Entropy") +
   scale_fill_manual(values=c(Shock="black", Pre="grey")) +
-  guides(fill="none") + labs(y="") 
+  guides(fill="none") + labs(y="")  + 
+  theme(
+    axis.text.x = element_text(angle=45)
+  )
 
-out <- (p_node_nt | p_node_responsivity ) / (p_edge_nt) / ( p_ensembles_size | p_conductance | p_nt_entropy | p_response_entropy  )
+
+
+layout <- "
+AAAAABBB
+CCCCCCCC
+#####DEF
+"
+out <- p_node_nt + p_node_responsivity +
+  p_edge_nt + 
+  p_ensemble_weight + p_nt_entropy + p_response_entropy +
+  plot_layout(design=layout)
+
 out
+
 
 
 ggsave(
