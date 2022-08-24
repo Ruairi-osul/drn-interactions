@@ -11,16 +11,16 @@ theme_set(
   bbc_style() +
     theme(
       text=element_text(family="Arial"),
-      strip.text.x = element_text(size = 10, angle=0, hjust=0.5, margin = margin(t = 0, r = 0, b = 10, l = 0)),
-      strip.text.y = element_text(size = 10, angle=0, hjust=0.5, margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      strip.text.x = element_text(size = 9, angle=0, hjust=0.5, margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      strip.text.y = element_text(size = 9, angle=0, hjust=0.5, margin = margin(t = 0, r = 0, b = 10, l = 0)),
       panel.spacing = unit(1, "lines"),
-      axis.text.x = element_text(size=10, angle=0),
+      axis.text.x = element_text(size=9, angle=0),
       axis.text.y = element_text(size=9),
-      legend.text = element_text(size=10),
+      legend.text = element_text(size=9),
       legend.key.size = unit(0.5, 'cm'),
       legend.position = "right",
       axis.line=element_line(),
-      axis.title.y = element_text(size=10, angle=90, margin = margin(t = 0, r = 5, b = 0, l = 0)),
+      axis.title.y = element_text(size=9, angle=90, margin = margin(t = 0, r = 0, b = 0, l = 5)),
       panel.border = element_blank(),
       strip.background = element_blank(),
       plot.title = element_text(size=9, face="plain", margin = margin(t = 0, r = 0, b = 5, l = 0))
@@ -88,23 +88,50 @@ df_edge <- read_csv("data/derived/graph/fs - edge.csv")  %>%
 
 ######  NODE DEGREE
 
-# ylab_node <- TeX(r"(\overset{\normalsize{Normalized Degree}}{\overset{\normalsize{($\sum{R_{SC}} \cdot N^{-1}$)}}})")
-ylab_node <- "Neuron\nNormalized\nDegree"
-
 degree_mod <- lmer(
   degree ~ block + neuron_type + response_fs_slow + 
     block:response_fs_slow + (1 | neuron_id),
   data=df_node
 )
-anova(degree_mod)
+anova_degree_mod <- anova(degree_mod)
 
 degree_emms_nt <- emmeans(
   degree_mod, 
   specs= ~ block * neuron_type
 )
-res <- pairs(degree_emms_nt, by="block")
-res
-pairs(res, by=NULL)
+constrasts_degree_nt <- pairs(degree_emms_nt, by="block")
+
+degree_emms_response <- emmeans(
+  degree_mod, 
+  specs= ~ block | response_fs_slow
+)
+contrasts_degree_response <- pairs(degree_emms_response)
+
+###### Edge Model
+
+df_edge_mod <- df_edge %>% 
+  filter(bin_width == 1) %>%
+  select(comb_id, nt_comb, distance, weight, block) %>% 
+  distinct() %>%
+  drop_na()
+
+mod_edge <- lmer(
+  weight ~ nt_comb + block  + 
+    distance + 
+    nt_comb:block + 
+    (1 | comb_id), 
+  data=df_edge_mod
+)
+anova_edge <- anova(mod_edge)
+
+emms_edge_nt <- emmeans(
+  mod_edge, 
+  specs = ~ block | nt_comb,
+  pbkrtest.limit = 6281
+)
+contrasts_edge_nt <- pairs(emms_edge_nt, by="block")
+
+###### Plots
 
 p_node_nt <- degree_emms_nt %>%
   as_tibble() %>%
@@ -129,14 +156,6 @@ p_node_nt <- degree_emms_nt %>%
   )
 p_node_nt
 
-degree_emms_response <- emmeans(
-  degree_mod, 
-  specs= ~ block | response_fs_slow
-)
-res <- pairs(degree_emms_response)
-res
-pairs(res, by=NULL)
-
 p_node_responsivity <- degree_emms_response %>%
   as_tibble() %>%
   ggplot(aes(x=response_fs_slow, y=emmean, fill=block, ymin=emmean - SE, ymax=emmean + SE)) + 
@@ -160,51 +179,7 @@ p_node_responsivity <- degree_emms_response %>%
   )
 p_node_responsivity
 
-p_node_nt + p_node_responsivity
-###### Edge Model
-
-ylab = TeX(r"(\overset{\normalsize{Pair Interaction}}{\overset{\normalsize{Strength ($R_{SC}$)}}} )")
-
-df_edge_mod <- df_edge %>% 
-  select(comb_id, a, b, same_ensemble, nt_comb, distance, weight, block) %>% 
-  distinct() %>%
-  left_join(
-    df_responders %>% select(neuron_id, response_fs_slow) %>% rename(a=neuron_id, response_a=response_fs_slow)
-  ) %>%
-  left_join(
-    df_responders %>% select(neuron_id, response_fs_slow) %>% rename(b=neuron_id, response_b=response_fs_slow)
-  ) %>%
-  mutate(
-    same_response = factor(response_a == response_b, levels=c(FALSE, TRUE), labels=c("Different\nResponsivity", "Same\nResponsivity")),
-    both_activated = (response_a == "activated") & (response_a == response_b),
-    both_inhibited = (response_a == "inhibited")& (response_a == response_b)
-  ) %>%
-  drop_na()
-
-df_edge_mod %>%
-  select(response_a, response_b, same_response) %>%
-  sample_n(10)
-
-mod_edge <- lmer(
-  weight ~ nt_comb + block + same_response + 
-    distance + 
-    nt_comb:block + same_response:block + 
-    (1 | comb_id), 
-  data=df_edge_mod
-)
-summary(mod_edge)
-anova(mod_edge)
-
-ems_edge_nt <- emmeans(
-  mod_edge, 
-  specs = ~ block | nt_comb,
-  pbkrtest.limit = 6281
-)
-
-pairs(ems_edge_nt, by="block")
-pairs(pairs(ems_edge_nt), by=NULL)
-
-p_edge_nt <-ems_edge_nt %>%
+p_edge_nt <-emms_edge_nt %>%
   as_tibble() %>%
   ggplot(aes(x=block, y=emmean, fill=block, ymin=emmean - SE, ymax=emmean + SE)) +
   geom_bar(
@@ -228,44 +203,19 @@ p_edge_nt <-ems_edge_nt %>%
     strip.background = element_blank(),
     strip.text = element_text(margin = margin(t = 0, r = 0, b = 10, l = 0))
   )
-
 p_edge_nt
 
-ems_sameresponse <- emmeans(
-  mod_edge, 
-  specs = ~ block | same_response, pbkrtest.limit = 6281)
-
-p_edge_response <- ems_sameresponse %>%
-  as_tibble() %>%
-  ggplot(aes(x=same_response, y=emmean, fill=block, ymin=emmean - SE, ymax=emmean + SE)) +
-  geom_bar(
-    stat="identity",  
-    color="black", 
-    width=0.7, 
-    position=position_dodge(preserve = "single", width=0.8)
-  ) +
-  geom_errorbar(
-    width=0.28, 
-    color='#5c5c5c', 
-    position=position_dodge(preserve = "single", width=0.8)
-  ) +
-  scale_fill_manual(values=c(Shock="black", Pre="grey")) +
-  labs(y=ylab) +
-  guides(fill="none") +
-  theme(
-    axis.text.x = element_text(size=10, angle=0),
-  )
-
-res <- pairs(ems_sameresponse, by="block")
-res
-pairs(res, by=NULL)
-
 layout <- "
-CCCCCC#DDDDD
-EEEEEEEEEEE#
+CCCCCCDDDDDD
+EEEEEEEEEEEE
 "
 out <- p_node_nt + p_node_responsivity + p_edge_nt  + plot_layout(design = layout)
 out
+
+
+#######
+ylab_node <- "Neuron\nNormalized\nDegree"
+ylab_edge <- "Neuron Pair\nInteraction\nWeight"
 
 
 
