@@ -132,12 +132,8 @@ emms_edge_nt <- emmeans(
 contrasts_edge_nt <- pairs(emms_edge_nt, by="block")
 
 ###### Plots
-
-#######
 ylab_node <- "Neuron\nNormalized\nDegree"
 ylab_edge <- "Neuron Pair\nInteraction\nWeight"
-
-
 
 p_node_nt <- degree_emms_nt %>%
   as_tibble() %>%
@@ -162,6 +158,7 @@ p_node_nt <- degree_emms_nt %>%
   )
 
 p_node_nt
+
 
 p_node_responsivity <- degree_emms_response %>%
   as_tibble() %>%
@@ -218,6 +215,11 @@ EEEEEEEEEEEE
 "
 out <- p_node_nt + p_node_responsivity + p_edge_nt  + plot_layout(design = layout)
 out
+
+
+#######
+ylab_node <- "Neuron\nNormalized\nDegree"
+ylab_edge <- "Neuron Pair\nInteraction\nWeight"
 
 
 
