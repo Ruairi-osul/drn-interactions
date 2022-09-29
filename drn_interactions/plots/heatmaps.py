@@ -161,12 +161,13 @@ def state_indicator(
     ytickslabs: Optional[Sequence] = None,
 ):
     plot_kwargs = {} if plot_kwargs is None else plot_kwargs
+    plot_kwargs["color"] = plot_kwargs.get("color", "k")
     if ax is None:
         _, ax = plt.subplots(figsize=(4, 4))
     ytickslabs = order if ytickslabs is None else ytickslabs
     mapper = {val: i for i, val in enumerate(order)}
     vals = states.map(mapper)
-    ax.plot(states.index, vals, color="black", **plot_kwargs)
+    ax.plot(states.index, vals, **plot_kwargs)
     ax.xaxis.set_major_locator(locater_x)
     if formater_x is not None:
         ax.xaxis.set_major_formatter(formater_x)
