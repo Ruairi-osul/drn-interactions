@@ -8,5 +8,8 @@ from .load_raw import (
     load_eeg_ts,
     load_events,
     load_waveforms,
+    load_lfp,
+    load_lfp_raw,
+    load_lfp_ts,
 )
 from .load_derived import load_derived_generic, load_neurons_derived

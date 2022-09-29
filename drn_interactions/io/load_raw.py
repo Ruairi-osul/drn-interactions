@@ -65,6 +65,11 @@ def load_lfp(block_name: str) -> pd.DataFrame:
     return pd.read_parquet(p)
 
 
+def load_lfp_raw(block_name: str) -> pd.DataFrame:
+    p = Config.data_dir / block_name / "lfp_raw.parquet.gzip"
+    return pd.read_parquet(p)
+
+
 def load_lfp_ts(block_name: str) -> pd.DataFrame:
     p = Config.data_dir / block_name / "lfp_band_ts.parquet.gzip"
     return pd.read_parquet(p)
