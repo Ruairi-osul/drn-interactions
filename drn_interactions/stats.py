@@ -59,7 +59,7 @@ def prop_of_total(arr):
     return arr / np.sum(arr)
 
 
-def mannwhitneyu_plusplus(x, y, names=("x", "y"), compare_f=None):
+def mannwhitneyu_plusplus(x, y, names=("x", "y"), compare_f=None, on_error="nan"):
     if compare_f is None:
         compare_f = mannwhitneyu
     out = {}
@@ -68,7 +68,16 @@ def mannwhitneyu_plusplus(x, y, names=("x", "y"), compare_f=None):
     out[f"Mean_{names[0]}"] = np.mean(x)
     out[f"Mean_{names[1]}"] = np.mean(y)
     out["Diff"] = np.mean(y) - np.mean(x)
-    out["U"], out["p"] = compare_f(x, y)
+    try:
+        out["U"], out["p"] = compare_f(x, y)
+    except ValueError:
+        if on_error == "nan":
+            out["U"] = np.nan
+            out["p"] = np.nan
+        elif on_error == "raise":
+            raise
+        else:
+            raise ValueError(f"on_error must be 'nan' or 'raise', not '{on_error}'")
     return pd.Series(out)
 
 
