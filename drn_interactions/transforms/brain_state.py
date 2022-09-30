@@ -1,5 +1,5 @@
 from drn_interactions.config import Config
-from typing import Optional, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 from drn_interactions.io import load_eeg_raw
 import pandas as pd
 from scipy.signal import medfilt
@@ -72,6 +72,7 @@ class RawEEGHandler:
         delta_frange: Tuple[float, float] = (0.2, 4),
         theta_frange: Tuple[float, float] = (4.1, 8),
         fs: float = 250,
+        loader: Callable = load_eeg_raw,
     ):
         self.block = block
         self.session_names = session_names
@@ -87,9 +88,10 @@ class RawEEGHandler:
         self.theta_frange = theta_frange
         self.fs = fs
         self._raw_eeg_df = None
+        self.loader = loader
 
     def _load_raw_eeg_df(self):
-        return load_eeg_raw(self.block)
+        return self.loader(self.block)
 
     def _preprocess_df(self, df: pd.DataFrame) -> pd.DataFrame:
         if self.t_start is not None:
