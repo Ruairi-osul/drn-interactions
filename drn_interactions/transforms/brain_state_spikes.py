@@ -57,11 +57,10 @@ def align_bins_to_states_long(
 def align_spikes_to_states_long(
     spikes_handler: SpikesHandler,
     states_handler: StateHandler,
-    neuron_types: Optional[pd.DataFrame],
+    neuron_types: pd.DataFrame,
 ) -> pd.DataFrame:
     spikes = spikes_handler.spikes.copy()
-    meta = load_neurons()[["neuron_id", "session_name", "group_name"]]
-    spikes = meta.merge(spikes, left_on="neuron_id", right_on="neuron_id")
+
     states = states_handler.states_df.copy()
     time_after = states[states_handler.time_column].diff().values[0]
 
