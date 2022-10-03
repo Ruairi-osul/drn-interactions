@@ -101,6 +101,7 @@ class SpikesHandler:
                 t_before=self.t_start,
                 t_max=self.t_stop,
             )
+            self._binned = self._binned.merge(self.df_neurons)
         return self._binned
 
     @property
