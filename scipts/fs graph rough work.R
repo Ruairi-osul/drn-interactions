@@ -174,7 +174,7 @@ p_node_responsivity <- degree_emms_response %>%
     color='#5c5c5c', 
     position=position_dodge(preserve = "single", width=0.8)
   ) +
-  scale_fill_manual(values=c(Shock="black", Pre="grey"), labels=c("Pre-Shock", "Shock")) +
+  scale_fill_manual(values=c(Shock="black", Pre="grey"), labels=c("Shock", "Pre-Shock")) +
   facet_grid(cols=vars(block)) +
   labs(y=ylab_node) +
   guides(fill = guide_legend(byrow = TRUE)) +
@@ -313,7 +313,7 @@ p_response_entropy <- df_ensemble_stats %>%
     color='#5c5c5c',
     position=position_dodge(preserve = "single", width=0.8)
   ) +
-  ggtitle("Ensemble\nResponse Entropy") +
+  ggtitle("Ensemble\nResponse Profile Entropy") +
   scale_fill_manual(values=c(Shock="black", Pre="grey")) +
   guides(fill="none") + labs(y="")  + 
   theme(
@@ -323,13 +323,11 @@ p_response_entropy <- df_ensemble_stats %>%
 
 
 layout <- "
-AAAAABBB
+AAAABBBB
 CCCCCCCC
-#####DEF
 "
 out <- p_node_nt + p_node_responsivity +
   p_edge_nt + 
-  p_ensemble_weight + p_nt_entropy + p_response_entropy +
   plot_layout(design=layout)
 
 out
@@ -337,9 +335,28 @@ out
 
 
 ggsave(
-  "FS Interactions.png",
+  "FS Interactions top.png",
   width = 8,
-  height = 5,
+  height = 3.2,
+  unit="in",
+  dpi=300
+)
+
+
+layout <- "
+DEF
+"
+out <- p_ensemble_weight + p_nt_entropy + p_response_entropy +
+  plot_layout(design=layout)
+
+out
+
+
+
+ggsave(
+  "FS Interactions bottom.png",
+  width = 6,
+  height = 2.1,
   unit="in",
   dpi=300
 )
