@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+from typing import Tuple
 
 
 def create_lattice(g: nx.Graph, weight="weight"):
@@ -28,9 +29,9 @@ def create_lattice(g: nx.Graph, weight="weight"):
 
 def create_random(g: nx.Graph, weight="weight"):
     weights = [v[weight] for v in g.edges.values()]
-    weights = np.random.choice(weights, len(weights), replace=False)
+    weights_rand = np.random.choice(weights, len(weights), replace=False)
     for i, (n1, n2) in enumerate(g.edges.keys()):
-        g[n1][n2][weight] = weights[i]
+        g[n1][n2][weight] = weights_rand[i]
     return g
 
 
@@ -64,7 +65,9 @@ def clustering_onnela(g: nx.Graph, weight="weight"):
     return out
 
 
-def small_word_propensity(g: nx.Graph, weight="weight", _inverse_distance: bool = True):
+def small_word_propensity(
+    g: nx.Graph, weight="weight", _inverse_distance: bool = True
+) -> Tuple[float, float, float, float]:
     def _add_distance(g):
         for n1, n2, d in g.edges(data=True):
             g[n1][n2]["_distance"] = 1 / d[weight]
