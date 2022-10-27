@@ -1,20 +1,12 @@
-from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import cross_val_score
 from sklearn.base import clone
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from typing import Callable, Dict
-from typing import Optional, List
-from drn_interactions.io import load_neurons_derived, load_derived_generic, load_eeg
-from drn_interactions.transforms import SpikesHandler
+from typing import Dict
 from copy import deepcopy
-from sklearn.metrics import r2_score
-from sklearn.feature_selection import SelectKBest, f_regression
 from .shuffle import shuffle_X
-from drn_interactions.config import Config, ExperimentInfo
-from drn_interactions.transforms.brain_state_spikes import align_spikes_to_states_wide
 
 
 class Decoder:
