@@ -9,6 +9,7 @@ from sklearn.metrics import r2_score
 from sklearn.feature_selection import SelectKBest, f_regression
 from .shuffle import shuffle_X_df
 from drn_interactions.config import Config
+from sklearn.compose import make_column_transformer
 
 
 class StateEncoder:
@@ -16,6 +17,7 @@ class StateEncoder:
         self,
         estimator,
         cv,
+        combined_mode: str = "population",
         shuffler=None,
         scoring=r2_score,
         neuron_types_path: Optional[Path] = None,
@@ -23,8 +25,23 @@ class StateEncoder:
         neuron_type_col: str = "neuron_type",
         verbose: bool = False,
     ):
+        """
+        Class for comparing external state information to population activity.
+
+        Args:
+            estimator: sklearn regression estimator
+            cv: sklearn cross-validation object
+            combined_mode: mode for combining population and state information. One of {"population", "combined"}, defaults to "population".
+            shuffler: interactions shuffler function, defaults to .shufflers/shuffle_X_df
+            scoring: sklearn scoring function, defaults to r2_score
+            neuron_types_path: path to neuron types file, defaults to None, whereby it is inferred from Config
+            neuron_id_col: column name for neuron id, defaults to "neuron_id"
+            neuron_type_col: column name for neuron type, defaults to "neuron_type"
+            verbose: whether to print progress bars, defaults to False
+        """
         self.estimator = estimator
         self.cv = cv
+        self.combined_mode = combined_mode
         self.shuffler = shuffler if shuffler is not None else shuffle_X_df
         self.scoring = scoring
         self.verbose = verbose
@@ -60,7 +77,7 @@ class StateEncoder:
 
     def run_combined(self, spikes: pd.DataFrame, states: pd.Series, shuffle=False):
         neurons = spikes.columns
-        df_all = spikes.join(states).copy()
+        df_all = self._get_df_all(spikes, states)
         out = {}
         for neuron in tqdm(neurons, disable=not self.verbose):
             y = spikes[neuron].values
@@ -73,7 +90,7 @@ class StateEncoder:
         self, spikes: pd.DataFrame, states: pd.Series, shuffle: bool = False
     ):
         neurons = spikes.columns
-        df_all = spikes
+        df_all = self._get_df_all(spikes, states)
         outer_dict = {}
         for neuron_type in tqdm(self.neuron_types, disable=not self.verbose):
             to_drop = (
@@ -111,14 +128,7 @@ class StateEncoder:
         for neuron in tqdm(spikes.columns, disable=not self.verbose):
             inner_dict = {}
             for k_features in range(min_features, max_features + 1):
-                estimator_k = clone(self.estimator)
-                estimator_k.regressor.steps.insert(
-                    -1,
-                    (
-                        "selector",
-                        SelectKBest(k=k_features, score_func=f_regression),
-                    ),
-                )
+                estimator_k = self._make_limit_estimator(k_features, spikes)
                 y = spikes[neuron].values
                 X = spikes.drop(neuron, axis=1)
                 try:
@@ -130,6 +140,42 @@ class StateEncoder:
                     break
             outer_dict[neuron] = inner_dict
         self.limit_scores_ = outer_dict
+
+    def _make_limit_estimator(self, k, spikes):
+        selector_base = SelectKBest(k=k, score_func=f_regression)
+        if self.combined_mode == "population":
+            selector = selector_base
+        elif self.combined_mode == "combined":
+            num_cols = len(spikes.columns)
+            selector = make_column_transformer(
+                (selector_base, slice(0, num_cols - 1)),
+                remainder="passthrough",
+            )
+        else:
+            raise ValueError(f"Invalid combined_mode: {self.combined_mode}")
+
+        estimator_k = clone(self.estimator)
+        estimator_k.regressor.steps.insert(
+            -1,
+            (
+                "selector",
+                selector,
+            ),
+        )
+        return estimator_k
+
+    def _get_df_all(self, spikes, states):
+        if not states.name:
+            states.name = "state"
+        if self.combined_mode == "population":
+            df_all = spikes
+        elif self.combined_mode == "combined":
+            df_all = spikes.join(states).copy()
+        else:
+            raise ValueError(
+                f"combined_mode must be one of {{'population', 'combined'}}, got {self.combined_mode}"
+            )
+        return df_all
 
     def get_limit_scores(self) -> Dict:
         return self.limit_scores_
