@@ -245,6 +245,16 @@ class EncodeRunner:
             frames.append(frame)
         return pd.concat(frames).reset_index(drop=True)
 
+    def run_multiple_comb(self, sessions, shuffle=False):
+        frames = []
+        for session in sessions:
+            self._spikes = None
+            self._states = None
+            self.loader.set_session(session)
+            frame = self.run_comb(shuffle=shuffle).assign(session_name=session)
+            frames.append(frame)
+        return pd.concat(frames).reset_index(drop=True)
+
     def run_multiple_limit(self, sessions, min_features, max_features, shuffle=False):
         frames = []
         for session in sessions:
@@ -264,7 +274,9 @@ class EncodeRunner:
             self._states = None
             self.loader.set_session(session)
             frame = self.run_dropout(shuffle=shuffle).assign(session_name=session)
-            frames.append(frame, )
+            frames.append(
+                frame,
+            )
         return pd.concat(frames).reset_index(drop=True)
 
     def run_multiple_state(self, sessions, shuffle=False):
