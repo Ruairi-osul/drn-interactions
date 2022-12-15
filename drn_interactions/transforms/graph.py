@@ -1,7 +1,6 @@
 from calendar import c
 from typing import Any, Optional, Sequence
 import networkx as nx
-import numpy as np
 import pandas as pd
 
 
@@ -45,6 +44,7 @@ class GraphTransformer:
         target_col: str = "b",
         comb_col_name: str = "comb_id",
     ) -> pd.DataFrame:
+        df_edge = df_edge.copy()
         df_edge[comb_col_name] = df_edge.apply(
             lambda x: sorted(list({x[source_col], x[target_col]})), axis=1
         )
@@ -93,10 +93,10 @@ class GraphTransformer:
         df_distance = df_distance[
             [self.distance_source_col, self.distance_target_col, self.distance_col]
         ]
-        df_distance = df_distance.loc[
-            lambda x: (x[self.distance_source_col].isin(df_edge[source_col]))
-            & (x[self.distance_target_col].isin(df_edge[target_col]))
-        ]
+        # df_distance = df_distance.loc[
+        #     lambda x: (x[self.distance_source_col].isin(df_edge[source_col]))
+        #     & (x[self.distance_target_col].isin(df_edge[target_col]))
+        # ]
         df_dist = df_distance.copy()
         df_dist = self._add_id_comb_col(
             df_distance,
@@ -104,6 +104,7 @@ class GraphTransformer:
             target_col=self.distance_target_col,
             comb_col_name=id_comb_col_name,
         )
+        df_dist = df_dist[df_dist[id_comb_col_name].isin(df_edge[id_comb_col_name])]
         df_dist.drop(
             columns=[self.distance_source_col, self.distance_target_col], inplace=True
         )

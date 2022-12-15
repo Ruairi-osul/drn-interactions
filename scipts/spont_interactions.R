@@ -1,9 +1,14 @@
 library(tidyverse)
 library(emmeans)
+library(extrafont)
+loadfonts(device = "win")
 library(bbplot)
 library(latex2exp)
 library(patchwork)
 library(mgcv)
+library(arrow)
+
+
 
 
 theme_set(
@@ -43,7 +48,7 @@ preprocess_neuron_types <- function(df){
     )
   )
 }
-df_response
+
 
 df_responders <- read_csv("data/derived/graph/spont - responders.csv") %>%
   mutate(
@@ -70,6 +75,59 @@ df_edge <- read_csv("data/derived/graph/spont - edge.csv")  %>%
   filter(shuffle == FALSE) %>%
   preprocess_nt_combs() %>%
   mutate(distance = distance / 1000)  # convert um to mm
+
+
+#######
+
+df_pcup <- read_parquet("data/derived/corrs/spont - pcup.parquet")
+
+df_pcup %>%
+  mutate(
+    neuron_type = factor(
+      neuron_type, 
+      levels=c("SR", "SIR", "FF")
+      ),
+    sig=factor(
+      sig, 
+      levels=c(FALSE, TRUE),
+      ordered=T
+    )
+    ) %>%
+  filter(bin_width == 1, shuffle == F) %>%
+  ggplot(aes(x=cc, fill=sig)) +
+  geom_histogram(breaks=seq(-0.5, 0.5, length.out=30)) +
+  scale_fill_manual(values=c("FALSE"="grey", "TRUE"="black")) +
+  facet_grid(cols=vars(neuron_type))
+
+
+df_pcup %>%
+  mutate(
+    neuron_type = factor(
+      neuron_type, 
+      levels=c("SR", "SIR", "FF")
+      ),
+    neg = (sig == TRUE) & (cc < 0)
+  ) %>%
+  filter(bin_width == 1, shuffle == F) %>%
+  group_by(neuron_type) %>%
+  summarise(neg=mean(neg == T)) %>%
+  ggplot(aes(y=neg, x=neuron_type)) +
+  geom_bar(stat="identity")
+  # scale_fill_manual(values=c("FALSE"="grey", "TRUE"="black")) +
+
+
+df_pcup %>%
+  mutate(
+    neuron_type = factor(
+      neuron_type, 
+      levels=c("SR", "SIR", "FF")
+    )
+  ) %>%
+  filter(bin_width == 1, shuffle == F) %>%
+  ggplot(aes(y=cc, x=neuron_type)) +
+  geom_boxplot()
+
+
 
 ########## Neuron Degree Mod
 
