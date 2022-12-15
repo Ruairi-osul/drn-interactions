@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Union, Tuple
 import pandas as pd
 import numpy as np
 import networkx as nx
@@ -43,7 +43,7 @@ class GraphAttributes:
         degree = G.degree(weight=self.weight_attr)
         degree = pd.Series(dict(degree))
         if self.normalized:
-            degree = degree / len(G.nodes)
+            degree = degree / (len(G.nodes) - 1)
         average_degree = np.mean(degree)
         return average_degree
 
@@ -52,15 +52,17 @@ class GraphAttributes:
         clustering = nx.average_clustering(G, weight=self.weight_attr)
         return clustering
 
-    def small_world_coefficient(self, G: nx.Graph) -> np.number:
+    def small_world_coefficient(self, G: nx.Graph) -> Tuple[float, float, float, float]:
         """Weighted small world coefficient"""
         try:
-            swp = small_word_propensity(G, weight=self.weight_attr)
-            return swp[0]
+            phi, delta, delta_C, delta_L = small_word_propensity(
+                G, weight=self.weight_attr
+            )
+            return phi, delta, delta_C, delta_L
         except NetworkXError:
-            return np.nan
+            return np.nan, np.nan, np.nan, np.nan
 
-    def average_path_length(self, G: nx.Graph) -> np.number:
+    def average_path_length(self, G: nx.Graph) -> Union[np.number, float]:
         """Average path length of a graph"""
         try:
             if self.inverse_distance:
@@ -71,15 +73,21 @@ class GraphAttributes:
 
     def density(self, G: nx.Graph) -> np.number:
         """Weighted density of a graph"""
-        summed_weight = np.sum([data["weight"] for u, v, data in G.edges(data=True)])
-        number_of_nodes = len(G.nodes)
-        return summed_weight / number_of_nodes
+        weights = [data["weight"] for u, v, data in G.edges(data=True)]
+        summed_weight = np.sum(weights)
+        number_of_edges = len(weights)
+        return summed_weight / number_of_edges
 
     def get_graph_attributes(self, G: nx.Graph) -> Dict:
+        # swp
+        phi, delta, delta_C, delta_L = self.small_world_coefficient(G)
         out = dict(
             avg_deg=self.average_degree(G),
             avg_clust=self.average_clustering_coefficient(G),
-            swp=self.small_world_coefficient(G),
+            swp=phi,
+            swp_delta=delta,
+            swp_delta_C=delta_C,
+            swp_delta_L=delta_L,
             avg_path_len=self.average_path_length(G),
             density=self.density(G),
         )

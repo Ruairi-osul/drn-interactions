@@ -90,7 +90,7 @@ df_edge <- read_csv("data/derived/graph/fs - edge.csv")  %>%
 
 degree_mod <- lmer(
   degree ~ block + neuron_type + response_fs_slow + 
-    block:response_fs_slow + (1 | neuron_id),
+    block:response_fs_slow + block:neuron_type + (1 | neuron_id),
   data=df_node
 )
 anova_degree_mod <- anova(degree_mod)
@@ -99,13 +99,26 @@ degree_emms_nt <- emmeans(
   degree_mod, 
   specs= ~ block * neuron_type
 )
-constrasts_degree_nt <- pairs(degree_emms_nt, by="block")
+constrasts_degree_nt <- pairs(degree_emms_nt, by="neuron_type")
+across_degree_nt <- pairs(constrasts_degree_nt, by=NULL)
+
 
 degree_emms_response <- emmeans(
   degree_mod, 
   specs= ~ block | response_fs_slow
 )
 contrasts_degree_response <- pairs(degree_emms_response)
+
+# stats 
+anova_degree_mod
+
+degree_emms_nt
+constrasts_degree_nt
+across_degree_nt
+
+degree_emms_response
+contrasts_degree_response
+
 
 ###### Edge Model
 
@@ -119,6 +132,7 @@ mod_edge <- lmer(
   weight ~ nt_comb + block  + 
     distance + 
     nt_comb:block + 
+    distance:block +
     (1 | comb_id), 
   data=df_edge_mod
 )
@@ -130,6 +144,11 @@ emms_edge_nt <- emmeans(
   pbkrtest.limit = 6281
 )
 contrasts_edge_nt <- pairs(emms_edge_nt, by="block")
+
+###
+anova_edge
+emms_edge_nt
+contrasts_edge_nt
 
 ###### Plots
 ylab_node <- "Neuron\nNormalized\nDegree"
