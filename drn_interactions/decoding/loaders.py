@@ -145,11 +145,83 @@ class FSFastDecodeDataLoader:
             .set_index(["bin"])
         )
         states = np.where(
-            (df_binned.index.values < self.window[0])
+            (df_binned.index.values >= self.window[0])
             & (df_binned.index.values <= self.window[1]),
             "PRE",
             "POST",
         )
         # states = pd.DataFrame({"cos": })
         states = pd.Series(states, index=df_binned.index.values)
+        return df_binned, states
+
+
+class FSFastDecodeDataLoaderTwoWindows:
+    def __init__(
+        self,
+        session_name=None,
+        block="base_shock",
+        t_start=0,
+        t_stop=600,
+        bin_width=0.01,
+        window_1=(0.05, 0.2),
+        window_2=(0.5, 0.8),
+        state_colname="state",
+    ):
+        self.block = block
+        self.t_start = t_start
+        self.t_stop = t_stop
+        self.session_name = session_name
+        self.bin_width = bin_width
+        self.state_colname = state_colname
+        self.window_1 = window_1
+        self.window_2 = window_2
+        self._spikes = None
+        self.transformer = ShockUtils()
+
+    def set_session(self, session_name):
+        self.session_name = session_name
+
+    def __call__(self):
+        session = (
+            [self.session_name] if self.session_name is not None else self.session_name
+        )
+        spikes = SpikesHandler(
+            block="base_shock",
+            bin_width=1,
+            session_names=session,
+            t_start=self.t_start,
+            t_stop=self.t_stop,
+        ).spikes
+        events = load_events(block_name="base_shock").query(
+            "event_s >= @self.t_start and event_s <= @self.t_stop"
+        )
+        df_binned = (
+            self.transformer.aligned_binned_from_spikes(
+                spikes,
+                events,
+                sessions=None,
+                bin_width=self.bin_width,
+            )
+            .drop("event", axis=1)
+            .set_index(["bin"])
+        )
+        states = np.select(
+            condlist=[
+                (
+                    (df_binned.index.values >= self.window_1[0])
+                    & (df_binned.index.values <= self.window_1[1]),
+                ),
+                (
+                    (df_binned.index.values >= self.window_2[0])
+                    & (df_binned.index.values <= self.window_2[1]),
+                ),
+            ],
+            choicelist=["PRE", "POST"],
+            default="NA",
+        ).flatten()
+        idx = states != "NA"
+        states = pd.Series(states, index=df_binned.index.values)
+        states = states.loc[idx]
+        df_binned = df_binned.loc[idx]
+
         return df_binned, states

@@ -37,7 +37,7 @@ class DecodePreprocessor:
     def subset_neurontypes(self, spikes):
         neurons = pd.read_csv(self.neuron_types_path).query(
             "neuron_type in @self.neuron_types"
-        )
+        ).dropna()
         idx = neurons.neuron_id.unique().tolist()
         return spikes[[c for c in spikes.columns if c in idx]]
 

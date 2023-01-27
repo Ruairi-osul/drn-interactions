@@ -60,6 +60,16 @@ class DecodeRunner:
             .rename(columns=dict(index="neuron_id"))
         )
 
+    def unit_scores_shuffle(self):
+        unit_scores = self.decoder.get_unit_scores_shuffle(self.spikes, self.states)
+        return (
+            pd.DataFrame(unit_scores)
+            .mean()
+            .to_frame("F1 Score")
+            .reset_index()
+            .rename(columns=dict(index="neuron_id"))
+        )
+
     def run(
         self,
     ):
@@ -71,7 +81,8 @@ class DecodeRunner:
             index=[0],
         )
         unit_res = self.unit_scores()
-        return pop_res, unit_res
+        unit_shuffle_res = self.unit_scores_shuffle()
+        return pop_res, unit_res, unit_shuffle_res
 
     def run_dropout(self, neuron_types=("SR", "SIR", "FF")):
         scores = np.empty(len(neuron_types))
@@ -105,16 +116,20 @@ class DecodeRunner:
     def run_multiple(self, sessions):
         pop_res = []
         unit_res = []
+        unit_shuffle_res = []
         for session in sessions:
             self._spikes = None
             self._states = None
             self.loader.set_session(session)
-            pop, unit = self.run()
+            pop, unit, unit_shuffle = self.run()
             pop_res.append(pop.assign(session_name=session))
             unit_res.append(unit.assign(session_name=session))
-        return pd.concat(pop_res).reset_index(drop=True), pd.concat(
-            unit_res
-        ).reset_index(drop=True)
+            unit_shuffle_res.append(unit_shuffle.assign(session_name=session))
+        return (
+            pd.concat(pop_res).reset_index(drop=True),
+            pd.concat(unit_res).reset_index(drop=True),
+            pd.concat(unit_shuffle_res).reset_index(drop=True)
+        )
 
     def run_multiple_limit(self, sessions, n_min, n_max):
         frames = []

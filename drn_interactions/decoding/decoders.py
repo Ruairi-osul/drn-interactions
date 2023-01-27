@@ -62,3 +62,18 @@ class Decoder:
                 scoring=self.scoring,
             )
         return out
+
+    def get_unit_scores_shuffle(self, spikes: pd.DataFrame, states: pd.Series) -> Dict:
+        y = self.unit_le.fit_transform(states)
+        X = spikes.values
+        out = {}
+        for i, n in enumerate(spikes.columns):
+            X_shuff, y_shuff = self.shuffler(X[:, i].reshape(-1, 1), y)
+            out[n] = cross_val_score(
+                self.estimator,
+                X_shuff,
+                y_shuff,
+                cv=self.cv,
+                scoring=self.scoring,
+            )
+        return out
